@@ -1,2 +1,0 @@
-# Ghusflashcards
-Flashcards med
