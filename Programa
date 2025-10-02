@@ -14,7 +14,9 @@
         .card-face { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
         .card-back { transform: rotateY(180deg); }
         #app { padding-bottom: 7rem; }
+        /* Ícones Phosphor - Usados para os botões de pasta */
         @import url('https://unpkg.com/@phosphor-icons/web@2.1.1/src/css/icons.css');
+        /* Estilo para o modal de log e novo card */
         .modal {
             background-color: rgba(0, 0, 0, 0.7);
             z-index: 50;
@@ -26,10 +28,11 @@
     <div id="main-container" class="w-full max-w-6xl h-full flex flex-col items-center">
 
         <!-- TELA INICIAL (HOME SCREEN) -->
-        <div id="home-screen" class="w-full h-auto p-4 md:p-8 bg-white rounded-2xl shadow-xl transition-all duration-500 flex-col md:flex-row hidden">
+        <div id="home-screen" class="w-full h-auto p-4 md:p-8 bg-white rounded-2xl shadow-xl transition-all duration-500 flex flex-col md:flex-row hidden">
             <div class="w-full md:w-1/4 md:min-w-[200px] border-b md:border-r border-slate-200 pb-4 md:pr-6 mb-6 md:mb-0">
                 <h2 class="text-xl font-bold text-indigo-700 mb-4 border-b border-indigo-100 pb-2">Filtro de Cards</h2>
                 
+                <!-- SELETOR DE MODO -->
                 <div class="flex space-x-4 mb-3 justify-between">
                     <label class="flex items-center text-sm font-medium text-slate-700">
                         <input type="radio" name="filter-mode" value="specialty" id="mode-specialty" checked class="text-indigo-600 focus:ring-indigo-500 mr-1">
@@ -44,20 +47,26 @@
                 <input type="text" id="search-input" placeholder="Buscar especialidade..." 
                        class="w-full p-2 mb-3 border border-slate-300 rounded-lg text-sm focus:ring-indigo-500 focus:border-indigo-500">
                 
+                <!-- Botão Adicionar Card -->
                 <button id="add-card-button" class="w-full py-2 px-4 bg-green-500 text-white font-bold rounded-lg shadow-md hover:bg-green-600 transition-colors mb-4 text-sm flex items-center justify-center space-x-2">
                     <i class="ph-plus-circle-fill text-lg"></i><span>Adicionar Card</span>
                 </button>
 
-                <div id="sidebar-list" class="space-y-2 max-h-[70vh] overflow-y-auto">
+
+                <div id="specialty-list" class="space-y-2 max-h-[70vh] overflow-y-auto">
                     <p class="text-sm text-slate-500">Carregando...</p>
                 </div>
             </div>
             <div id="home-content" class="flex-grow md:pl-6">
+                
                 <div id="global-controls" class="flex justify-between items-center mb-6">
                     <h1 class="text-3xl font-extrabold text-slate-800">Revisão Ativa</h1>
-                    <button id="show-log-button-home" class="text-sm font-bold py-2 px-4 bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition-colors border border-indigo-200">Ver Log →</button>
+                    <button id="show-log-button" class="text-sm font-bold py-2 px-4 bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition-colors border border-indigo-200">Ver Log →</button>
                 </div>
 
+                <p class="text-slate-600 mb-6">Selecione o tópico ao lado para começar.</p>
+                
+                <!-- VISUALIZAÇÃO DE PASTAS -->
                 <div id="folder-view" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     <!-- Pastas serão renderizadas aqui -->
                 </div>
@@ -65,13 +74,15 @@
         </div>
 
         <!-- TELA DE ESTUDO (STUDY SCREEN) -->
-        <div id="study-screen" class="w-full max-w-xl hidden">
-            <div class="flex justify-between items-center w-full mb-6">
-                <button id="back-to-home-button" class="text-sm font-semibold text-slate-500 hover:text-indigo-600">← Voltar</button>
+        <div id="app" class="w-full max-w-xl hidden">
+             
+            <div id="global-controls-study" class="flex justify-between items-center w-full mb-6">
+                <button id="back-to-home" class="text-sm font-semibold text-slate-500 hover:text-indigo-600">← Voltar</button>
                 <button id="show-log-button-study" class="text-sm font-bold py-2 px-4 bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition-colors border border-indigo-200">Ver Log →</button>
             </div>
 
-            <div id="study-title" class="text-center text-indigo-600 font-extrabold text-lg mb-2"></div>
+
+            <div id="specialty-title" class="text-center text-indigo-600 font-extrabold text-lg mb-2"></div>
             <div id="card-counter" class="text-center text-slate-500 font-semibold mb-4"></div>
             <div class="card-container w-full h-80 mb-6">
                 <div id="flashcard" class="flashcard relative w-full h-full cursor-pointer">
@@ -97,49 +108,59 @@
                 <div id="mastery-controls" class="flex justify-center space-x-4"></div>
             </div>
         </div>
+
     </div>
 
-    <!-- MODAL DE NOVO CARD -->
+    <!-- MODAL DE NOVO CARD (NOVO) -->
     <div id="new-card-modal" class="modal fixed inset-0 flex items-center justify-center hidden">
         <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-lg mx-4">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-bold text-slate-800">Criar Novo Flashcard</h3>
-                <button id="close-new-card-button" class="text-slate-500 hover:text-slate-800 text-2xl leading-none">&times;</button>
+                <button id="close-new-card" class="text-slate-500 hover:text-slate-800 text-2xl leading-none">&times;</button>
             </div>
+            
             <form id="new-card-form" class="space-y-4">
                 <div>
-                    <label for="new-card-question" class="block text-sm font-medium text-slate-700">Frente (Pergunta)</label>
-                    <textarea id="new-card-question" required class="mt-1 w-full p-2 border border-slate-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                    <label for="new-card-frente" class="block text-sm font-medium text-slate-700">Frente (Pergunta)</label>
+                    <textarea id="new-card-frente" required class="mt-1 w-full p-2 border border-slate-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"></textarea>
                 </div>
                 <div>
-                    <label for="new-card-answer" class="block text-sm font-medium text-slate-700">Verso (Resposta)</label>
-                    <textarea id="new-card-answer" required class="mt-1 w-full p-2 border border-slate-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                    <label for="new-card-verso" class="block text-sm font-medium text-slate-700">Verso (Resposta)</label>
+                    <textarea id="new-card-verso" required class="mt-1 w-full p-2 border border-slate-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"></textarea>
                 </div>
                 <div class="flex space-x-4">
                     <div class="flex-1">
-                        <label for="new-card-specialty" class="block text-sm font-medium text-slate-700">Especialidade</label>
-                        <input type="text" id="new-card-specialty" required class="mt-1 w-full p-2 border border-slate-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+                        <label for="new-card-especialidade" class="block text-sm font-medium text-slate-700">Especialidade</label>
+                        <input type="text" id="new-card-especialidade" required class="mt-1 w-full p-2 border border-slate-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
                     </div>
                     <div class="flex-1">
-                        <label for="new-card-tags" class="block text-sm font-medium text-slate-700">Tags (Separar por vírgula)</label>
+                        <label for="new-card-tags" class="block text-sm font-medium text-slate-700">Tags (Separar por espaço)</label>
                         <input type="text" id="new-card-tags" class="mt-1 w-full p-2 border border-slate-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
                     </div>
                 </div>
+                
                 <div class="pt-2">
-                    <button type="submit" class="w-full py-2 px-4 bg-indigo-600 text-white font-bold rounded-lg shadow-md hover:bg-indigo-700 transition-colors">Adicionar e Salvar</button>
+                    <button type="submit" class="w-full py-2 px-4 bg-indigo-600 text-white font-bold rounded-lg shadow-md hover:bg-indigo-700 transition-colors">
+                        Adicionar e Salvar
+                    </button>
                 </div>
             </form>
         </div>
     </div>
+
 
     <!-- MODAL DE LOG -->
     <div id="log-modal" class="modal fixed inset-0 flex items-center justify-center hidden">
         <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-lg mx-4">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-bold text-slate-800">Log de Alterações (Sessão Atual)</h3>
-                <button id="close-log-button" class="text-slate-500 hover:text-slate-800 text-2xl leading-none">&times;</button>
+                <button id="close-log" class="text-slate-500 hover:text-slate-800 text-2xl leading-none">&times;</button>
             </div>
-            <textarea id="log-area" readonly class="w-full h-64 p-2 bg-slate-100 text-slate-800 text-xs rounded-md border border-slate-300 focus:outline-none"></textarea>
+            
+            <div class="relative h-64">
+                <textarea id="log-area" readonly class="w-full h-full p-2 bg-slate-100 text-slate-800 text-xs rounded-md border border-slate-300 focus:outline-none"></textarea>
+            </div>
+
             <div class="mt-4 flex justify-end">
                 <button id="copy-log-button" class="text-sm font-semibold py-2 px-4 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors">Copiar Log</button>
             </div>
@@ -147,335 +168,261 @@
     </div>
 
     <script>
-        // --- CONSTANTES E CONFIGURAÇÃO ---
-        const GOOGLE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTuKOdGRgn_JIk3jsVorWCXFtAuewmXj75vNb_2okDq9uG2ladBckiWoB8-26mh1SlndcUxIpo1TB-D/pub?gid=0&single=true&output=csv';
-        const MASTERY_LEVELS = {'gray': { cardBg: 'bg-white', btnBg: 'bg-slate-300', ring: 'ring-slate-400' }, 'red': { cardBg: 'bg-red-100', btnBg: 'bg-red-400', ring: 'ring-red-400' }, 'orange': { cardBg: 'bg-orange-100', btnBg: 'bg-orange-400', ring: 'ring-orange-400' }, 'yellow': { cardBg: 'bg-yellow-100', btnBg: 'bg-yellow-400', ring: 'ring-yellow-400' }, 'green': { cardBg: 'bg-green-100', btnBg: 'bg-green-400', ring: 'ring-green-400' }, 'blue': { cardBg: 'bg-blue-100', btnBg: 'bg-blue-400', ring: 'ring-blue-400' }};
+        // --- DADOS E CONSTANTES ---
+        const originalSheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTuKOdGRgn_JIk3jsVorWCXFtAuewmXj75vNb_2okDq9uG2ladBckiWoB8-26mh1SlndcUxIpo1TB-D/pub?gid=0&single=true&output=csv';
+        const GOOGLE_SHEET_URL = 'https://corsproxy.io/?' + encodeURIComponent(originalSheetUrl);
+        const ML = {'gray': { cardBg: 'bg-white', btnBg: 'bg-slate-300', ring: 'ring-slate-400' }, 'red': { cardBg: 'bg-red-100', btnBg: 'bg-red-400', ring: 'ring-red-400' }, 'orange': { cardBg: 'bg-orange-100', btnBg: 'bg-orange-400', ring: 'ring-orange-400' }, 'yellow': { cardBg: 'bg-yellow-100', btnBg: 'bg-yellow-400', ring: 'ring-yellow-400' }, 'green': { cardBg: 'bg-green-100', btnBg: 'bg-green-400', ring: 'ring-green-400' }, 'blue': { cardBg: 'bg-blue-100', btnBg: 'bg-blue-400', ring: 'ring-blue-400' }};
         
-        // --- ESTADO DA APLICAÇÃO ---
-        let allCards = [];
-        let currentDeckCards = [];
-        let currentCardIndex = 0;
-        let isFlipped = false;
-        let currentSessionKey = null;
-        let currentFilterMode = 'specialty';
+        // --- ESTADO GERAL E DOM ---
+        let allC = [], cards = [], currentI = 0, isFlipped = false, currentS = null, currentM = 'specialty';
+        const getId = id => document.getElementById(id); 
+        const HOME = getId('home-screen'), SIDEBAR = getId('specialty-list'), SEARCH = getId('search-input'), 
+        MODE_S = getId('mode-specialty'), MODE_T = getId('mode-tag'), HOME_CONTENT = getId('home-content'), FOLDERS = getId('folder-view'),
+        STUDY = getId('app'), S_TITLE = getId('specialty-title'), CARD_CONT = getId('flashcard'), cF = getId('card-front'), cB = getId('card-back'), 
+        F_TEXT = document.querySelector('#card-front p'), B_TEXT = document.querySelector('#card-back p'), COUNTER = getId('card-counter'), CONTROLS = getId('mastery-controls'), 
+        FLIP_BTN = getId('flip-button'), NEXT_BTN = getId('next-button'), PREV_BTN = getId('prev-button'), BACK_BTN = getId('back-to-home'), 
+        LOG_BTN_H = getId('show-log-button'), LOG_BTN_S = getId('show-log-button-study'), 
+        LOG_MODAL = getId('log-modal'), L_AREA = getId('log-area'), COPY_BTN = getId('copy-log-button'), CLOSE_LOG = getId('close-log'),
+        ADD_CARD_BTN = getId('add-card-button'), NEW_CARD_MODAL = getId('new-card-modal'), CLOSE_NEW_CARD = getId('close-new-card'),
+        NEW_CARD_FORM = getId('new-card-form'), NEW_FRENTE = getId('new-card-frente'), NEW_VERSO = getId('new-card-verso'), 
+        NEW_ESP = getId('new-card-especialidade'), NEW_TAGS = getId('new-card-tags');
 
-        // --- SELETORES DE DOM ---
-        const dom = {
-            homeScreen: document.getElementById('home-screen'),
-            sidebarList: document.getElementById('sidebar-list'),
-            searchInput: document.getElementById('search-input'),
-            modeSpecialtyRadio: document.getElementById('mode-specialty'),
-            modeTagRadio: document.getElementById('mode-tag'),
-            homeContent: document.getElementById('home-content'),
-            folderView: document.getElementById('folder-view'),
-            studyScreen: document.getElementById('study-screen'),
-            studyTitle: document.getElementById('study-title'),
-            cardContainer: document.getElementById('flashcard'),
-            cardFront: document.getElementById('card-front'),
-            cardBack: document.getElementById('card-back'),
-            frontText: document.querySelector('#card-front p'),
-            backText: document.querySelector('#card-back p'),
-            cardCounter: document.getElementById('card-counter'),
-            masteryControls: document.getElementById('mastery-controls'),
-            flipButton: document.getElementById('flip-button'),
-            nextButton: document.getElementById('next-button'),
-            prevButton: document.getElementById('prev-button'),
-            backToHomeButton: document.getElementById('back-to-home-button'),
-            logButtonHome: document.getElementById('show-log-button-home'),
-            logButtonStudy: document.getElementById('show-log-button-study'),
-            logModal: document.getElementById('log-modal'),
-            logArea: document.getElementById('log-area'),
-            copyLogButton: document.getElementById('copy-log-button'),
-            closeLogButton: document.getElementById('close-log-button'),
-            addCardButton: document.getElementById('add-card-button'),
-            newCardModal: document.getElementById('new-card-modal'),
-            closeNewCardButton: document.getElementById('close-new-card-button'),
-            newCardForm: document.getElementById('new-card-form'),
-            newCardQuestion: document.getElementById('new-card-question'),
-            newCardAnswer: document.getElementById('new-card-answer'),
-            newCardSpecialty: document.getElementById('new-card-specialty'),
-            newCardTags: document.getElementById('new-card-tags'),
-        };
 
-        // --- PERSISTÊNCIA & LOG ---
-        const getStorageKey = (sessionKey) => `flashcardState_${sessionKey}`;
-
-        function saveSessionState() {
-            if (!currentSessionKey) return;
-            const state = { cards: currentDeckCards, log: dom.logArea.value };
-            localStorage.setItem(getStorageKey(currentSessionKey), JSON.stringify(state));
+        // --- PERSISTÊNCIA E LOG ---
+        const getKey = s => 'flashcardState_' + s;
+        const save = () => { if (!currentS) return; localStorage.setItem(getKey(currentS), JSON.stringify({ cards, log: L_AREA.value })); };
+        function addLog(m) {
+            const now = new Date();
+            const ts = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            L_AREA.value += `[${ts}] ${m}\n`; L_AREA.scrollTop = L_AREA.scrollHeight; 
         }
-
-        function addToLog(message) {
-            const timestamp = new Date().toLocaleTimeString('pt-BR');
-            dom.logArea.value += `[${timestamp}] ${message}\n`;
-            dom.logArea.scrollTop = dom.logArea.scrollHeight;
-        }
-
-        function logNewCardForSheet(card) {
-            const csvLine = [ card.id, `"${card.question}"`, `"${card.answer}"`, card.masteryColor, `"${card.specialty}"`, `"${card.tags}"` ].join(',');
-            addToLog(`NOVO CARD (COPIE PARA PLANILHA):\n${csvLine}\n`);
-        }
-
-        // --- CARGA DE DADOS DA PLANILHA ---
-        async function fetchAndParseSheetData() {
-            try {
-                const response = await fetch(GOOGLE_SHEET_URL);
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                const csvText = await response.text();
-                const lines = csvText.trim().split('\n');
-                const header = lines.shift().split(',').map(h => h.trim().replace(/"/g, ''));
-                
-                const colIndexes = {
-                    id: header.indexOf('Número'),
-                    question: header.indexOf('Frente'),
-                    answer: header.indexOf('Verso'),
-                    color: header.indexOf('Cor'),
-                    specialty: header.indexOf('Especialidade'),
-                    tags: header.indexOf('Tags')
-                };
-
-                if (Object.values(colIndexes).some(index => index < 0)) {
-                    throw new Error("Uma ou mais colunas essenciais não foram encontradas na planilha.");
-                }
-
-                allCards = lines.map(line => {
-                    const values = line.split(',');
-                    const getValue = i => values[i] ? values[i].trim().replace(/^"|"$/g, '') : '';
-                    const color = getValue(colIndexes.color).toLowerCase() || 'gray';
-                    
-                    return {
-                        id: parseInt(getValue(colIndexes.id), 10),
-                        question: getValue(colIndexes.question),
-                        answer: getValue(colIndexes.answer),
-                        specialty: getValue(colIndexes.specialty) || 'Geral',
-                        tags: getValue(colIndexes.tags),
-                        masteryColor: MASTERY_LEVELS[color] ? color : 'gray'
-                    };
-                }).filter(card => card.id && card.question);
-
-            } catch (error) {
-                console.error('Erro ao carregar dados da planilha:', error);
-                dom.homeContent.innerHTML += `<div class="p-4 mt-6 bg-red-100 border-l-4 border-red-500 text-red-800"><p class="font-bold">Erro de Carga:</p><p>${error.message}</p></div>`;
-            }
-        }
-
-        // --- LÓGICA DE UI E NAVEGAÇÃO ---
-        function switchScreen(screenName) {
-            dom.homeScreen.classList.toggle('hidden', screenName !== 'home');
-            dom.studyScreen.classList.toggle('hidden', screenName !== 'study');
-            dom.logModal.classList.add('hidden');
-            dom.newCardModal.classList.add('hidden');
-            if (screenName === 'home') {
-                dom.searchInput.value = '';
-                renderHomeScreen();
-            }
-        }
-
-        function createFolderElement(item, cards) {
-            const count = cards.length;
-            const colorCounts = cards.reduce((acc, card) => {
-                acc[card.masteryColor] = (acc[card.masteryColor] || 0) + 1;
-                return acc;
-            }, {});
-
-            const colorBarHtml = ['red', 'orange', 'yellow', 'green', 'blue', 'gray'].map(color => {
-                const percentage = count > 0 ? ((colorCounts[color] || 0) / count) * 100 : 0;
-                return percentage > 0 ? `<div style="width:${percentage}%;" class="h-2 ${MASTERY_LEVELS[color].btnBg}"></div>` : '';
-            }).join('');
-
-            const folder = document.createElement('button');
-            folder.className = 'bg-white p-4 rounded-xl shadow-md border border-slate-200 text-left hover:shadow-lg hover:border-indigo-400 transition transform hover:scale-[1.02]';
-            folder.onclick = () => startStudySession(item);
-            folder.innerHTML = `
-                <div class="text-indigo-600 text-3xl mb-2"><i class="${currentFilterMode === 'specialty' ? 'ph-folder-open-fill' : 'ph-tag-fill'}"></i></div>
-                <h3 class="text-base font-bold text-slate-800 truncate mb-1">${item}</h3>
-                <p class="text-sm text-slate-500">${count} Cards</p>
-                <div class="flex w-full overflow-hidden rounded-full mt-2 border border-slate-200">${colorBarHtml}</div>
-            `;
-            return folder;
-        }
-
-        function renderHomeScreen(filter = '') {
-            dom.sidebarList.innerHTML = '';
-            dom.folderView.innerHTML = '';
+        
+        function logNewCard(card) {
+            const csvLine = [
+                card.id,
+                `"${card.question}"`,
+                `"${card.answer}"`,
+                card.masteryColor,
+                `"${card.specialty}"`,
+                `"${card.tags}"`
+            ].join('\t');
             
-            const itemsMap = new Map();
-            allCards.forEach(card => {
-                const key = card[currentFilterMode];
-                if (key && key.trim() !== '') {
-                    if (!itemsMap.has(key)) itemsMap.set(key, []);
-                    itemsMap.get(key).push(card);
-                }
-            });
+            addLog(`NOVO CARD CRIADO (ADICIONAR À PLANILHA):\n[${csvLine}]\n`);
+        }
 
-            const sortedItems = [...itemsMap.keys()].sort();
-            const filteredItems = sortedItems.filter(item => item.toLowerCase().includes(filter.toLowerCase()));
+
+        // --- CARGA DE DADOS (CSV) ---
+        async function fetchCards() {
+            try {
+                const res = await fetch(GOOGLE_SHEET_URL);
+                if (!res.ok) throw new Error(`Falha na requisição. Status: ${res.status}.`);
+                const lines = (await res.text()).trim().split('\n');
+                const header = lines.shift().split(',').map(h => h.trim().replace(/"/g, ''));
+                const idx = { id: header.indexOf('Número'), q: header.indexOf('Frente'), a: header.indexOf('Verso'), c: header.indexOf('Cor'), s: header.indexOf('Especialidade'), t: header.indexOf('Tags') };
+
+                if (idx.id < 0 || idx.q < 0 || idx.a < 0 || idx.s < 0 || idx.t < 0) throw new Error("Colunas necessárias (Número, Frente, Verso, Especialidade, Tags) não encontradas.");
+
+                allC = lines.map(line => {
+                    const v = line.split(','); 
+                    const gV = i => v[i] ? v[i].trim().replace(/^"|"$/g, '') : '';
+                    const color = gV(idx.c).toLowerCase() || 'gray';
+                    const specialty = gV(idx.s) || 'Geral';
+                    const tags = gV(idx.t) || '';
+                    return { id: parseInt(gV(idx.id), 10), question: gV(idx.q), answer: gV(idx.a), specialty, tags, masteryColor: ML[color] ? color : 'gray' };
+                }).filter(c => c.id && c.question);
+                
+                if(allC.length === 0) {
+                    HOME_CONTENT.insertAdjacentHTML('beforeend', `<div class="p-4 mt-6 bg-yellow-100 border-l-4 border-yellow-500 rounded-lg text-sm text-yellow-800"><p class="font-semibold">AVISO:</p><p>Planilha carregada, mas nenhum card encontrado. Verifique se há dados nas linhas.</p></div>`);
+                }
+
+            } catch (e) {
+                const errorHtml = `<div class="p-4 mt-6 bg-red-100 border-l-4 border-red-500 rounded-lg text-sm text-red-800"><p class="font-semibold mb-1">ERRO DE CARGA:</p><p>${e.message}</p></div>`;
+                HOME_CONTENT.insertAdjacentHTML('beforeend', errorHtml);
+                console.error('Fetch error:', e);
+            }
+        }
+        
+        // --- ADICIONAR CARD (NOVO) ---
+        function addNewCard(e) {
+            e.preventDefault();
+            
+            const frente = NEW_FRENTE.value.trim();
+            const verso = NEW_VERSO.value.trim();
+            const especialidade = NEW_ESP.value.trim() || 'Geral';
+            const tags = NEW_TAGS.value.trim();
+
+            if (!frente || !verso) {
+                alert("Preencha Frente e Verso.");
+                return;
+            }
+
+            const maxId = allC.length > 0 ? Math.max(...allC.map(c => c.id)) : 0;
+            const newId = maxId + 1;
+
+            const newCard = { id: newId, question: frente, answer: verso, specialty: especialidade, tags: tags, masteryColor: 'gray' };
+
+            allC.push(newCard);
+            NEW_CARD_FORM.reset();
+            NEW_CARD_MODAL.classList.add('hidden');
+            
+            logNewCard(newCard);
+            renderList();
+        }
+
+        // --- NAVEGAÇÃO E TELA ---
+        function renderScreen(s) {
+            HOME.classList.toggle('hidden', s !== 'home'); STUDY.classList.toggle('hidden', s !== 'study'); LOG_MODAL.classList.add('hidden'); NEW_CARD_MODAL.classList.add('hidden');
+            if (s === 'home') { SEARCH.value = ''; renderList(); }
+        }
+
+        const extractItems = (mode) => Array.from(new Set(allC.map(c => c[mode]))).filter(i => i && i.trim() !== '').sort();
+        const applyFilters = () => renderList(SEARCH.value.toLowerCase());
+
+        function renderList(filter = '') {
+            SIDEBAR.innerHTML = ''; FOLDERS.innerHTML = '';
+            
+            const allItems = extractItems(currentM);
+            const filteredItems = allItems.filter(item => item.toLowerCase().includes(filter));
+            const icon = currentM === 'specialty' ? 'ph-folder-open-fill' : 'ph-tag-fill';
 
             if (filteredItems.length === 0) {
-                const message = `<p class="text-sm text-slate-500 p-2">Nenhum item encontrado.</p>`;
-                dom.sidebarList.innerHTML = message;
-                dom.folderView.innerHTML = `<div class="col-span-full text-center p-8 text-slate-500">${message}</div>`;
+                const msg = allItems.length > 0 ? `<p class="text-sm text-red-500">Nenhum item encontrado.</p>` : '<p class="text-sm text-slate-500">Nenhum dado carregado.</p>';
+                SIDEBAR.innerHTML = msg; FOLDERS.innerHTML = `<div class="col-span-full text-center p-8 text-slate-500">${msg}</div>`;
                 return;
             }
 
             filteredItems.forEach(item => {
-                const cardsInDeck = itemsMap.get(item);
-                const sidebarButton = document.createElement('button');
-                sidebarButton.textContent = `${item} (${cardsInDeck.length})`;
-                sidebarButton.className = 'w-full text-left p-2 rounded-lg text-slate-700 font-medium hover:bg-indigo-100 text-sm truncate';
-                sidebarButton.onclick = () => startStudySession(item);
-                dom.sidebarList.appendChild(sidebarButton);
-                dom.folderView.appendChild(createFolderElement(item, cardsInDeck));
+                const deckCards = allC.filter(c => c[currentM] === item);
+                const count = deckCards.length;
+                
+                const colorCounts = deckCards.reduce((acc, card) => { acc[card.masteryColor] = (acc[card.masteryColor] || 0) + 1; return acc; }, {});
+
+                let colorBarHtml = ['red', 'orange', 'yellow', 'green', 'blue', 'gray'].map(color => {
+                    const cCount = colorCounts[color] || 0;
+                    if (cCount > 0) {
+                        const perc = Math.round((cCount / count) * 100); 
+                        return `<div style="width:${perc}%;" class="h-2 ${ML[color].btnBg}"></div>`;
+                    }
+                    return '';
+                }).join('');
+                
+                const progressBar = `<div class="flex w-full overflow-hidden rounded-full mt-2 border border-slate-200">${colorBarHtml}</div>`;
+
+                const btnSidebar = document.createElement('button');
+                btnSidebar.textContent = `${item} (${count})`;
+                btnSidebar.className = 'w-full text-left p-2 rounded-lg text-slate-700 font-medium hover:bg-indigo-100 transition-colors text-sm truncate';
+                btnSidebar.onclick = () => startSession(item);
+                SIDEBAR.appendChild(btnSidebar);
+
+                const folderCard = document.createElement('button');
+                folderCard.className = 'bg-white p-4 rounded-xl shadow-md border border-slate-200 text-left hover:shadow-lg hover:border-indigo-400 transition transform hover:scale-[1.02] cursor-pointer';
+                folderCard.onclick = () => startSession(item);
+                folderCard.innerHTML = `
+                    <div class="text-indigo-600 text-3xl mb-2 flex items-center"><i class="${icon}"></i></div>
+                    <h3 class="text-base font-bold text-slate-800 truncate mb-1">${item}</h3>
+                    <p class="text-sm text-slate-500">${count} Cards</p>
+                    ${progressBar}`;
+                FOLDERS.appendChild(folderCard);
             });
         }
 
-        function startStudySession(sessionKey) {
-            currentSessionKey = sessionKey;
-            const allDeckCards = allCards.filter(c => c[currentFilterMode] === sessionKey);
-            const savedState = localStorage.getItem(getStorageKey(currentSessionKey));
-
-            if (savedState) {
-                const state = JSON.parse(savedState);
-                const savedColors = new Map(state.cards.map(c => [c.id, c.masteryColor]));
-                currentDeckCards = allDeckCards.map(card => ({
-                    ...card,
-                    masteryColor: savedColors.get(card.id) || card.masteryColor
-                }));
-                dom.logArea.value = state.log || '';
-                addToLog(`Sessão retomada para: ${sessionKey}.`);
-            } else {
-                currentDeckCards = allDeckCards;
-                dom.logArea.value = '';
-                addToLog(`Nova sessão iniciada para: ${sessionKey} (${currentDeckCards.length} cards).`);
-            }
-
-            currentCardIndex = 0;
-            isFlipped = false;
-            dom.studyTitle.textContent = `${currentFilterMode.toUpperCase()}: ${sessionKey.toUpperCase()}`;
-            renderCard();
-            switchScreen('study');
-        }
-
-        // --- LÓGICA DO CARD DE ESTUDO ---
-        function setMasteryColor(color) {
-            const card = currentDeckCards[currentCardIndex];
-            if (card.masteryColor !== color) {
-                card.masteryColor = color;
-                addToLog(`Card ${card.id} - Cor alterada para ${color}.`);
-                updateCardAppearance();
-                saveSessionState();
-            }
-        }
-
-        function renderMasteryButtons() {
-            dom.masteryControls.innerHTML = '';
-            const card = currentDeckCards[currentCardIndex];
-            for (const color in MASTERY_LEVELS) {
-                const level = MASTERY_LEVELS[color];
-                const button = document.createElement('button');
-                const isSelected = card && card.masteryColor === color;
-                const ringClass = isSelected ? `ring-4 ring-offset-2 ${level.ring}` : 'border-white';
-                
-                button.className = `w-10 h-10 rounded-full border-2 shadow-lg transition-all transform hover:scale-110 ${level.btnBg} ${ringClass}`;
-                button.onclick = () => setMasteryColor(color);
-                dom.masteryControls.appendChild(button);
-            }
-        }
-
-        function updateCardAppearance() {
-            if (!currentDeckCards.length) return;
-            const masteryInfo = MASTERY_LEVELS[currentDeckCards[currentCardIndex].masteryColor];
-            renderMasteryButtons();
+        function startSession(iV) {
+            currentS = iV; let cTS = allC.filter(c => c[currentM] === iV);
             
-            const allBgClasses = Object.values(MASTERY_LEVELS).map(l => l.cardBg).concat(['bg-slate-50', 'bg-white']);
-            dom.cardFront.classList.remove(...allBgClasses);
-            dom.cardBack.classList.remove(...allBgClasses);
-            dom.cardFront.classList.add(masteryInfo.cardBg);
-            dom.cardBack.classList.add(masteryInfo.cardBg);
-        }
-
-        function renderCard() {
-            if (!currentDeckCards.length) {
-                dom.frontText.textContent = "Nenhum card.";
-                dom.backText.textContent = "Volte e selecione um deck.";
-                dom.cardCounter.textContent = '0 de 0';
-                return;
+            const saved = localStorage.getItem(getKey(currentS));
+            if (saved) {
+                const s = JSON.parse(saved);
+                const sM = new Map(s.cards.map(c => [c.id, c.masteryColor]));
+                cards = cTS.map(c => ({ ...c, masteryColor: sM.get(c.id) || c.masteryColor }));
+                L_AREA.value = s.log || '';
+                addLog(`Sessão retomada para ${currentM === 'specialty' ? 'Especialidade' : 'Tag'}: ${iV}.`);
+            } else {
+                cards = cTS;
+                L_AREA.value = `[${new Date().toLocaleTimeString('pt-BR')}] Iniciada nova sessão por ${currentM === 'specialty' ? 'Especialidade' : 'Tag'}: ${iV} (${cards.length} cards).\n`;
             }
 
-            const card = currentDeckCards[currentCardIndex];
-            dom.frontText.textContent = card.question;
-            dom.backText.textContent = card.answer;
-            dom.cardCounter.textContent = `Card ${currentCardIndex + 1} de ${currentDeckCards.length}`;
+            currentI = 0; isFlipped = false; S_TITLE.textContent = `${currentM.toUpperCase()}: ${iV.toUpperCase()}`; renderCard(); renderScreen('study');
+        }
+
+        // --- CARD E DOMÍNIO ---
+        function setMColor(c) {
+            const card = cards[currentI];
+            if (card.masteryColor !== c) {
+                card.masteryColor = c; addLog(`Card ${card.id} - Cor alterada para ${c}.`); updateAppearance(); save(); 
+            }
+        }
+
+        function renderMButtons() {
+            CONTROLS.innerHTML = '';
+            const card = cards[currentI];
+            for (const color in ML) {
+                const level = ML[color];
+                const btn = document.createElement('button');
+                const isS = card && card.masteryColor === color;
+                const rC = isS ? `ring-4 ring-offset-2 ${level.ring}` : 'border-white';
+                
+                btn.className = `w-10 h-10 rounded-full border-2 shadow-lg transition-all transform hover:scale-110 ${level.btnBg} ${rC}`;
+                btn.onclick = () => setMColor(color);
+                CONTROLS.appendChild(btn);
+            }
+        }
+
+        function updateAppearance() {
+            if (!cards.length) return;
+            const m = ML[cards[currentI].masteryColor];
+            renderMButtons(); 
+            const allBg = Object.values(ML).map(l => l.cardBg).concat(['bg-slate-50', 'bg-white']);
+            cF.classList.remove(...allBg); cB.classList.remove(...allBg);
+            cF.classList.add(m.cardBg); cB.classList.add(m.cardBg);
+        }
+        
+        function renderCard() {
+            if (!cards.length) {
+                F_TEXT.textContent = "Nenhum card."; B_TEXT.textContent = "Volte para a tela inicial."; COUNTER.textContent = '0 cards.'; return;
+            };
+
+            const card = cards[currentI];
+            F_TEXT.textContent = card.question; B_TEXT.textContent = card.answer;
+            COUNTER.textContent = `Card ${currentI + 1} de ${cards.length}`;
             
             if (isFlipped) {
-                dom.cardContainer.classList.remove('is-flipped');
-                isFlipped = false;
-                dom.flipButton.textContent = 'Virar Card';
+                CARD_CONT.classList.remove('is-flipped'); isFlipped = false; FLIP_BTN.textContent = 'Virar Card';
             }
-            updateCardAppearance();
+            updateAppearance();
         }
 
+        // --- NAVEGAÇÃO ---
         function flipCard() {
-            if (!currentDeckCards.length) return;
+            if (!cards.length) return;
             isFlipped = !isFlipped;
-            dom.cardContainer.classList.toggle('is-flipped');
-            dom.flipButton.textContent = isFlipped ? 'Esconder Resposta' : 'Virar Card';
+            CARD_CONT.classList.toggle('is-flipped');
+            FLIP_BTN.textContent = isFlipped ? 'Esconder Resposta' : 'Virar Card';
         }
 
-        const nextCard = () => { if (!currentDeckCards.length) return; currentCardIndex = (currentCardIndex + 1) % currentDeckCards.length; renderCard(); };
-        const prevCard = () => { if (!currentDeckCards.length) return; currentCardIndex = (currentCardIndex - 1 + currentDeckCards.length) % currentDeckCards.length; renderCard(); };
+        const nextCard = () => { if (!cards.length) return; currentI = (currentI + 1) % cards.length; renderCard(); };
+        const prevCard = () => { if (!cards.length) return; currentI = (currentI - 1 + cards.length) % cards.length; renderCard(); };
 
-        // --- INICIALIZAÇÃO E LISTENERS ---
-        function setupEventListeners() {
-            dom.flipButton.addEventListener('click', flipCard);
-            dom.cardContainer.addEventListener('click', flipCard);
-            dom.nextButton.addEventListener('click', nextCard);
-            dom.prevButton.addEventListener('click', prevCard);
-            dom.backToHomeButton.addEventListener('click', () => switchScreen('home'));
-            
-            dom.modeSpecialtyRadio.addEventListener('change', () => { currentFilterMode = 'specialty'; dom.searchInput.placeholder = 'Buscar especialidade...'; renderHomeScreen(); });
-            dom.modeTagRadio.addEventListener('change', () => { currentFilterMode = 'tags'; dom.searchInput.placeholder = 'Buscar tag...'; renderHomeScreen(); });
-            dom.searchInput.addEventListener('input', () => renderHomeScreen(dom.searchInput.value));
+        // --- LISTENERS E INIT ---
+        FLIP_BTN.addEventListener('click', flipCard); CARD_CONT.addEventListener('click', flipCard);
+        NEXT_BTN.addEventListener('click', nextCard); PREV_BTN.addEventListener('click', prevCard);
+        BACK_BTN.addEventListener('click', () => renderScreen('home')); 
+        
+        if (MODE_S) MODE_S.addEventListener('change', () => { currentM = 'specialty'; SEARCH.placeholder = 'Buscar especialidade...'; renderList(); });
+        if (MODE_T) MODE_T.addEventListener('change', () => { currentM = 'tags'; SEARCH.placeholder = 'Buscar tags...'; renderList(); });
+        if (SEARCH) SEARCH.addEventListener('input', applyFilters);
+        
+        LOG_BTN_H.addEventListener('click', () => LOG_MODAL.classList.remove('hidden'));
+        LOG_BTN_S.addEventListener('click', () => LOG_MODAL.classList.remove('hidden'));
+        CLOSE_LOG.addEventListener('click', () => LOG_MODAL.classList.add('hidden'));
 
-            // Modals
-            [dom.logButtonHome, dom.logButtonStudy].forEach(btn => btn.addEventListener('click', () => dom.logModal.classList.remove('hidden')));
-            dom.closeLogButton.addEventListener('click', () => dom.logModal.classList.add('hidden'));
-            dom.copyLogButton.addEventListener('click', () => { dom.logArea.select(); document.execCommand('copy'); });
+        COPY_BTN.addEventListener('click', () => { L_AREA.select(); document.execCommand('copy'); });
 
-            dom.addCardButton.addEventListener('click', () => {
-                dom.newCardSpecialty.value = currentFilterMode === 'specialty' && currentSessionKey ? currentSessionKey : '';
-                dom.newCardModal.classList.remove('hidden');
-            });
-            dom.closeNewCardButton.addEventListener('click', () => dom.newCardModal.classList.add('hidden'));
-            dom.newCardForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                const newCard = {
-                    id: (Math.max(0, ...allCards.map(c => c.id)) + 1),
-                    question: dom.newCardQuestion.value.trim(),
-                    answer: dom.newCardAnswer.value.trim(),
-                    specialty: dom.newCardSpecialty.value.trim() || 'Geral',
-                    tags: dom.newCardTags.value.trim(),
-                    masteryColor: 'gray'
-                };
-                if (!newCard.question || !newCard.answer) return;
-                
-                allCards.push(newCard);
-                logNewCardForSheet(newCard);
-                dom.newCardForm.reset();
-                dom.newCardModal.classList.add('hidden');
-                renderHomeScreen();
-            });
-        }
+        ADD_CARD_BTN.addEventListener('click', () => NEW_CARD_MODAL.classList.remove('hidden'));
+        CLOSE_NEW_CARD.addEventListener('click', () => NEW_CARD_MODAL.classList.add('hidden'));
+        NEW_CARD_FORM.addEventListener('submit', addNewCard);
 
-        async function initializeApp() {
-            switchScreen('home');
-            await fetchAndParseSheetData();
-            renderHomeScreen();
-            setupEventListeners();
-        }
-
-        initializeApp();
+        async function init() { renderScreen('home'); await fetchCards(); renderList(); }
+        init();
     </script>
 
 </body>
