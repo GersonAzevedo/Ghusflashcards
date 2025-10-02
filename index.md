@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -284,6 +283,30 @@
         }
 
         // --- CARGA DE DADOS ---
+        function parseCsvLine(line) {
+            const values = [];
+            let current = '';
+            let inQuotes = false;
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                if (char === '"') {
+                    if (inQuotes && line[i+1] === '"') {
+                        current += '"';
+                        i++; // Skip next quote
+                    } else {
+                        inQuotes = !inQuotes;
+                    }
+                } else if (char === ',' && !inQuotes) {
+                    values.push(current);
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            values.push(current);
+            return values;
+        }
+
         async function fetchAndParseSheetData() {
             try {
                 const response = await fetch(GOOGLE_SHEET_URL);
@@ -296,8 +319,8 @@
                 if (Object.values(colIndexes).some(index => index < 0)) throw new Error("Colunas essenciais não encontradas na planilha.");
 
                 allCards = lines.map(line => {
-                    const values = line.split(',');
-                    const getValue = i => values[i] ? values[i].trim().replace(/^"|"$/g, '') : '';
+                    const values = parseCsvLine(line);
+                    const getValue = i => values[i] ? values[i].trim() : '';
                     const color = getValue(colIndexes.color).toLowerCase() || 'gray';
                     return { id: parseInt(getValue(colIndexes.id), 10) || 0, question: getValue(colIndexes.question), answer: getValue(colIndexes.answer), specialty: getValue(colIndexes.specialty) || 'Geral', tags: getValue(colIndexes.tags), masteryColor: MASTERY_LEVELS[color] ? color : 'gray' };
                 }).filter(card => card.id && card.question);
@@ -527,7 +550,6 @@
                 const savedState = JSON.parse(savedStateJSON);
                 const savedColors = new Map(savedState.cards.map(c => [c.id, c.masteryColor]));
                 
-                // Aplica cores salvas aos cards originais do deck antes de filtrar e embaralhar
                 cardsInDeck.forEach(originalCard => {
                     if(savedColors.has(originalCard.id)){
                          originalCard.masteryColor = savedColors.get(originalCard.id);
