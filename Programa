@@ -266,9 +266,12 @@
                 addToLog(`Carregados ${allFlashcards.length} cards iniciais.`);
 
             } catch (error) {
-                homeStatus.textContent = `ERRO FATAL: ${error.message}`;
-                cardCounter.textContent = 'Erro ao carregar os cards.';
+                // ALTERADO: Garante que a mensagem de erro apareça na tela inicial (homeStatus)
+                const errorMessage = `ERRO DE CARGA: ${error.message}.`;
+                homeStatus.textContent = errorMessage; 
                 console.error('Fetch error:', error);
+                // Não retorna, permitindo que o fluxo de inicialização continue,
+                // mas a lista de especialidades estará vazia (allFlashcards.length === 0).
             }
         }
         
@@ -305,7 +308,12 @@
             const specialties = extractSpecialties();
 
             if (specialties.length === 0) {
-                specialtySidebar.innerHTML = '<p class="text-sm text-red-500">Nenhuma especialidade encontrada. Verifique o CSV.</p>';
+                // Se a lista de cards estiver vazia, mostra a mensagem de erro (ou de carregamento)
+                if (allFlashcards.length === 0 && homeStatus.textContent.includes('ERRO')) {
+                     specialtySidebar.innerHTML = '<p class="text-sm text-red-500">Erro. Consulte o Status de Carga acima.</p>';
+                } else {
+                     specialtySidebar.innerHTML = '<p class="text-sm text-slate-500">Nenhuma especialidade encontrada. Verifique o CSV.</p>';
+                }
                 return;
             }
 
