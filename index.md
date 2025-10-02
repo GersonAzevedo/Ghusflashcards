@@ -776,7 +776,7 @@
         function setupLockScreen() {
             dom.passwordForm.addEventListener('submit', (e) => {
                 e.preventDefault();
-                if (dom.passwordInput.value.trim().toLowerCase() === 'O2') {
+                if (dom.passwordInput.value.trim().toLowerCase() === 'gerson') {
                     dom.lockScreen.classList.add('hidden');
                     dom.mainContainer.classList.remove('hidden');
                     initializeApp();
