@@ -6,470 +6,478 @@
     <title>Flashcards de Estudo</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-        /* Estilos para Animação do Card */
-        .card-container {
-            perspective: 1000px;
-        }
-        .flashcard {
-            transform-style: preserve-3d;
-            transition: transform 0.6s;
-        }
-        .flashcard.is-flipped {
-            transform: rotateY(180deg);
-        }
-        .card-face {
-            backface-visibility: hidden;
-            -webkit-backface-visibility: hidden; /* Safari */
-        }
-        .card-back {
-            transform: rotateY(180deg);
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .card-container { perspective: 1000px; }
+        .flashcard { transform-style: preserve-3d; transition: transform 0.6s; }
+        .flashcard.is-flipped { transform: rotateY(180deg); }
+        .card-face { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+        .card-back { transform: rotateY(180deg); }
+        #app { padding-bottom: 7rem; }
+        @import url('https://unpkg.com/@phosphor-icons/web@2.1.1/src/css/icons.css');
+        .modal {
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 50;
         }
     </style>
 </head>
 <body class="bg-slate-100 flex items-start justify-center min-h-screen p-4">
 
-    <!-- Container Principal que gerencia as telas -->
     <div id="main-container" class="w-full max-w-6xl h-full flex flex-col items-center">
 
-        <!-- Tela Inicial (Home Screen) -->
-        <div id="home-screen" class="w-full h-auto p-4 md:p-8 bg-white rounded-2xl shadow-2xl transition-all duration-500 flex flex-col md:flex-row hidden">
-            
-            <!-- Sidebar: Lista de Especialidades -->
-            <div class="w-full md:w-1/4 md:min-w-[200px] border-b md:border-b-0 md:border-r border-slate-200 pb-4 md:pb-0 md:pr-6 mb-6 md:mb-0">
-                <h2 class="text-xl font-bold text-indigo-700 mb-4 border-b border-indigo-100 pb-2">Especialidades</h2>
-                <div id="specialty-list" class="space-y-2 max-h-[70vh] overflow-y-auto">
-                    <!-- Botões de especialidades serão inseridos aqui -->
+        <!-- TELA INICIAL (HOME SCREEN) -->
+        <div id="home-screen" class="w-full h-auto p-4 md:p-8 bg-white rounded-2xl shadow-xl transition-all duration-500 flex-col md:flex-row hidden">
+            <div class="w-full md:w-1/4 md:min-w-[200px] border-b md:border-r border-slate-200 pb-4 md:pr-6 mb-6 md:mb-0">
+                <h2 class="text-xl font-bold text-indigo-700 mb-4 border-b border-indigo-100 pb-2">Filtro de Cards</h2>
+                
+                <div class="flex space-x-4 mb-3 justify-between">
+                    <label class="flex items-center text-sm font-medium text-slate-700">
+                        <input type="radio" name="filter-mode" value="specialty" id="mode-specialty" checked class="text-indigo-600 focus:ring-indigo-500 mr-1">
+                        Especialidade
+                    </label>
+                    <label class="flex items-center text-sm font-medium text-slate-700">
+                        <input type="radio" name="filter-mode" value="tags" id="mode-tag" class="text-indigo-600 focus:ring-indigo-500 mr-1">
+                        Tag
+                    </label>
+                </div>
+
+                <input type="text" id="search-input" placeholder="Buscar especialidade..." 
+                       class="w-full p-2 mb-3 border border-slate-300 rounded-lg text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                
+                <button id="add-card-button" class="w-full py-2 px-4 bg-green-500 text-white font-bold rounded-lg shadow-md hover:bg-green-600 transition-colors mb-4 text-sm flex items-center justify-center space-x-2">
+                    <i class="ph-plus-circle-fill text-lg"></i><span>Adicionar Card</span>
+                </button>
+
+                <div id="sidebar-list" class="space-y-2 max-h-[70vh] overflow-y-auto">
                     <p class="text-sm text-slate-500">Carregando...</p>
                 </div>
             </div>
-
-            <!-- Conteúdo Principal da Home -->
-            <div class="flex-grow md:pl-6">
-                <h1 class="text-3xl md:text-4xl font-extrabold text-slate-800 mb-4">Bem-vindo à Revisão Ativa!</h1>
-                <p class="text-slate-600 mb-6">
-                    Selecione uma especialidade no painel esquerdo para começar sua sessão de estudo com Flashcards.
-                    O progresso (cores de domínio) será salvo no seu navegador.
-                </p>
-                
-                <div class="p-4 bg-indigo-50 border-l-4 border-indigo-400 rounded-lg text-sm text-indigo-800">
-                    <p class="font-semibold mb-1">Status da Carga:</p>
-                    <p id="home-status">Carregando dados da planilha...</p>
+            <div id="home-content" class="flex-grow md:pl-6">
+                <div id="global-controls" class="flex justify-between items-center mb-6">
+                    <h1 class="text-3xl font-extrabold text-slate-800">Revisão Ativa</h1>
+                    <button id="show-log-button-home" class="text-sm font-bold py-2 px-4 bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition-colors border border-indigo-200">Ver Log →</button>
                 </div>
-                
-                <!-- REMOVIDO: Bloco com a explicação das cores. -->
 
+                <div id="folder-view" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Pastas serão renderizadas aqui -->
+                </div>
             </div>
         </div>
 
+        <!-- TELA DE ESTUDO (STUDY SCREEN) -->
+        <div id="study-screen" class="w-full max-w-xl hidden">
+            <div class="flex justify-between items-center w-full mb-6">
+                <button id="back-to-home-button" class="text-sm font-semibold text-slate-500 hover:text-indigo-600">← Voltar</button>
+                <button id="show-log-button-study" class="text-sm font-bold py-2 px-4 bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition-colors border border-indigo-200">Ver Log →</button>
+            </div>
 
-        <!-- Tela de Estudo (Study Screen) - Conteúdo Original -->
-        <div id="app" class="w-full max-w-xl hidden">
-            
-            <div id="specialty-title" class="text-center text-indigo-600 font-extrabold text-lg mb-2"></div>
+            <div id="study-title" class="text-center text-indigo-600 font-extrabold text-lg mb-2"></div>
             <div id="card-counter" class="text-center text-slate-500 font-semibold mb-4"></div>
-
-            <!-- Flashcard -->
             <div class="card-container w-full h-80 mb-6">
                 <div id="flashcard" class="flashcard relative w-full h-full cursor-pointer">
-                    <!-- Frente -->
                     <div id="card-front" class="card-face absolute w-full h-full flex items-center justify-center p-8 rounded-2xl shadow-xl transition-colors duration-300">
                         <p class="text-2xl md:text-3xl font-semibold text-center text-slate-800"></p>
                     </div>
-                    <!-- Verso -->
                     <div id="card-back" class="card-face card-back absolute w-full h-full flex items-center justify-center p-8 rounded-2xl shadow-xl transition-colors duration-300">
                         <p class="text-xl md:text-2xl text-center text-slate-700"></p>
                     </div>
                 </div>
             </div>
 
-            <!-- Controles de Navegação -->
             <div class="flex flex-col space-y-3">
-                 <button id="flip-button" class="w-full py-3 px-4 bg-indigo-600 text-white font-bold rounded-xl shadow-md hover:bg-indigo-700 transition-colors">
-                    Virar Card
-                </button>
+                 <button id="flip-button" class="w-full py-3 px-4 bg-indigo-600 text-white font-bold rounded-xl shadow-md hover:bg-indigo-700 transition-colors">Virar Card</button>
                 <div class="flex space-x-3">
-                    <button id="prev-button" class="w-full py-3 px-4 bg-white text-slate-700 font-bold rounded-xl shadow-md hover:bg-slate-100 transition-colors border border-slate-300">
-                        Anterior
-                    </button>
-                    <button id="next-button" class="w-full py-3 px-4 bg-white text-slate-700 font-bold rounded-xl shadow-md hover:bg-slate-100 transition-colors border border-slate-300">
-                        Próximo
-                    </button>
+                    <button id="prev-button" class="w-full py-3 px-4 bg-white text-slate-700 font-bold rounded-xl shadow-md hover:bg-slate-100 transition-colors border border-slate-300">Anterior</button>
+                    <button id="next-button" class="w-full py-3 px-4 bg-white text-slate-700 font-bold rounded-xl shadow-md hover:bg-slate-100 transition-colors border border-slate-300">Próximo</button>
                 </div>
             </div>
             
-            <!-- Controles de Domínio -->
             <div class="mt-6 p-4 bg-white rounded-xl shadow-inner border border-slate-200">
                 <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wider mb-3 text-center">Marcar Domínio</h3>
-                <div id="mastery-controls" class="flex justify-center space-x-4">
-                    <!-- Os botões de cor serão inseridos aqui pelo JS -->
-                </div>
+                <div id="mastery-controls" class="flex justify-center space-x-4"></div>
             </div>
-
-            <!-- Log de Alterações -->
-            <div id="log-container" class="mt-8">
-                <div class="flex justify-between items-center mb-2">
-                    <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wider">Log de Alterações (Sessão)</h3>
-                    <button id="copy-log-button" class="text-sm font-semibold text-indigo-600 hover:text-indigo-800">Copiar Log</button>
-                </div>
-                <textarea id="log-area" readonly class="w-full h-24 p-2 bg-slate-200 text-slate-800 text-xs rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
-            </div>
-
-            <!-- Botão de Retorno -->
-            <button id="back-to-home" class="mt-6 text-sm font-semibold text-slate-500 hover:text-indigo-600 w-full">
-                ← Voltar para a Tela Inicial
-            </button>
         </div>
+    </div>
 
+    <!-- MODAL DE NOVO CARD -->
+    <div id="new-card-modal" class="modal fixed inset-0 flex items-center justify-center hidden">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-lg mx-4">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-slate-800">Criar Novo Flashcard</h3>
+                <button id="close-new-card-button" class="text-slate-500 hover:text-slate-800 text-2xl leading-none">&times;</button>
+            </div>
+            <form id="new-card-form" class="space-y-4">
+                <div>
+                    <label for="new-card-question" class="block text-sm font-medium text-slate-700">Frente (Pergunta)</label>
+                    <textarea id="new-card-question" required class="mt-1 w-full p-2 border border-slate-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                </div>
+                <div>
+                    <label for="new-card-answer" class="block text-sm font-medium text-slate-700">Verso (Resposta)</label>
+                    <textarea id="new-card-answer" required class="mt-1 w-full p-2 border border-slate-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                </div>
+                <div class="flex space-x-4">
+                    <div class="flex-1">
+                        <label for="new-card-specialty" class="block text-sm font-medium text-slate-700">Especialidade</label>
+                        <input type="text" id="new-card-specialty" required class="mt-1 w-full p-2 border border-slate-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div class="flex-1">
+                        <label for="new-card-tags" class="block text-sm font-medium text-slate-700">Tags (Separar por vírgula)</label>
+                        <input type="text" id="new-card-tags" class="mt-1 w-full p-2 border border-slate-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                </div>
+                <div class="pt-2">
+                    <button type="submit" class="w-full py-2 px-4 bg-indigo-600 text-white font-bold rounded-lg shadow-md hover:bg-indigo-700 transition-colors">Adicionar e Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL DE LOG -->
+    <div id="log-modal" class="modal fixed inset-0 flex items-center justify-center hidden">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-lg mx-4">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-slate-800">Log de Alterações (Sessão Atual)</h3>
+                <button id="close-log-button" class="text-slate-500 hover:text-slate-800 text-2xl leading-none">&times;</button>
+            </div>
+            <textarea id="log-area" readonly class="w-full h-64 p-2 bg-slate-100 text-slate-800 text-xs rounded-md border border-slate-300 focus:outline-none"></textarea>
+            <div class="mt-4 flex justify-end">
+                <button id="copy-log-button" class="text-sm font-semibold py-2 px-4 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors">Copiar Log</button>
+            </div>
+        </div>
     </div>
 
     <script>
-        // --- DADOS E CONSTANTES ---
+        // --- CONSTANTES E CONFIGURAÇÃO ---
         const GOOGLE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTuKOdGRgn_JIk3jsVorWCXFtAuewmXj75vNb_2okDq9uG2ladBckiWoB8-26mh1SlndcUxIpo1TB-D/pub?gid=0&single=true&output=csv';
-
-        const MASTERY_LEVELS = {
-            'gray':   { cardBg: 'bg-white',      btnBg: 'bg-slate-300', ring: 'ring-slate-400' },
-            'red':    { cardBg: 'bg-red-100',    btnBg: 'bg-red-400', ring: 'ring-red-400' },
-            'orange': { cardBg: 'bg-orange-100', btnBg: 'bg-orange-400', ring: 'ring-orange-400' },
-            'yellow': { cardBg: 'bg-yellow-100', btnBg: 'bg-yellow-400', ring: 'ring-yellow-400' },
-            'green':  { cardBg: 'bg-green-100',  btnBg: 'bg-green-400', ring: 'ring-green-400' },
-            'blue':   { cardBg: 'bg-blue-100',   btnBg: 'bg-blue-400', ring: 'ring-blue-400' }
-        };
+        const MASTERY_LEVELS = {'gray': { cardBg: 'bg-white', btnBg: 'bg-slate-300', ring: 'ring-slate-400' }, 'red': { cardBg: 'bg-red-100', btnBg: 'bg-red-400', ring: 'ring-red-400' }, 'orange': { cardBg: 'bg-orange-100', btnBg: 'bg-orange-400', ring: 'ring-orange-400' }, 'yellow': { cardBg: 'bg-yellow-100', btnBg: 'bg-yellow-400', ring: 'ring-yellow-400' }, 'green': { cardBg: 'bg-green-100', btnBg: 'bg-green-400', ring: 'ring-green-400' }, 'blue': { cardBg: 'bg-blue-100', btnBg: 'bg-blue-400', ring: 'ring-blue-400' }};
         
-        // --- DADOS DA APLICAÇÃO ---
-        let allFlashcards = []; // Todos os cards carregados do CSV
-        let flashcards = [];    // Cards filtrados (sessão de estudo atual)
-
         // --- ESTADO DA APLICAÇÃO ---
+        let allCards = [];
+        let currentDeckCards = [];
         let currentCardIndex = 0;
         let isFlipped = false;
-        let currentSpecialty = null;
+        let currentSessionKey = null;
+        let currentFilterMode = 'specialty';
 
-        // --- ELEMENTOS DO DOM ---
-        const homeScreen = document.getElementById('home-screen');
-        const specialtySidebar = document.getElementById('specialty-list');
-        const homeStatus = document.getElementById('home-status');
-        const studyScreen = document.getElementById('app');
-        const specialtyTitle = document.getElementById('specialty-title');
-        
-        const cardContainer = document.getElementById('flashcard');
-        const cardFront = document.getElementById('card-front');
-        const cardBack = document.getElementById('card-back');
-        const cardFrontText = document.querySelector('#card-front p');
-        const cardBackText = document.querySelector('#card-back p');
-        const cardCounter = document.getElementById('card-counter');
-        const masteryControls = document.getElementById('mastery-controls');
-        
-        const flipButton = document.getElementById('flip-button');
-        const nextButton = document.getElementById('next-button');
-        const prevButton = document.getElementById('prev-button');
-        const backToHomeButton = document.getElementById('back-to-home');
+        // --- SELETORES DE DOM ---
+        const dom = {
+            homeScreen: document.getElementById('home-screen'),
+            sidebarList: document.getElementById('sidebar-list'),
+            searchInput: document.getElementById('search-input'),
+            modeSpecialtyRadio: document.getElementById('mode-specialty'),
+            modeTagRadio: document.getElementById('mode-tag'),
+            homeContent: document.getElementById('home-content'),
+            folderView: document.getElementById('folder-view'),
+            studyScreen: document.getElementById('study-screen'),
+            studyTitle: document.getElementById('study-title'),
+            cardContainer: document.getElementById('flashcard'),
+            cardFront: document.getElementById('card-front'),
+            cardBack: document.getElementById('card-back'),
+            frontText: document.querySelector('#card-front p'),
+            backText: document.querySelector('#card-back p'),
+            cardCounter: document.getElementById('card-counter'),
+            masteryControls: document.getElementById('mastery-controls'),
+            flipButton: document.getElementById('flip-button'),
+            nextButton: document.getElementById('next-button'),
+            prevButton: document.getElementById('prev-button'),
+            backToHomeButton: document.getElementById('back-to-home-button'),
+            logButtonHome: document.getElementById('show-log-button-home'),
+            logButtonStudy: document.getElementById('show-log-button-study'),
+            logModal: document.getElementById('log-modal'),
+            logArea: document.getElementById('log-area'),
+            copyLogButton: document.getElementById('copy-log-button'),
+            closeLogButton: document.getElementById('close-log-button'),
+            addCardButton: document.getElementById('add-card-button'),
+            newCardModal: document.getElementById('new-card-modal'),
+            closeNewCardButton: document.getElementById('close-new-card-button'),
+            newCardForm: document.getElementById('new-card-form'),
+            newCardQuestion: document.getElementById('new-card-question'),
+            newCardAnswer: document.getElementById('new-card-answer'),
+            newCardSpecialty: document.getElementById('new-card-specialty'),
+            newCardTags: document.getElementById('new-card-tags'),
+        };
 
-        const logArea = document.getElementById('log-area');
-        const copyLogButton = document.getElementById('copy-log-button');
+        // --- PERSISTÊNCIA & LOG ---
+        const getStorageKey = (sessionKey) => `flashcardState_${sessionKey}`;
 
-        // --- FUNÇÕES DE ARMAZENAMENTO E DADOS ---
-
-        function getSpecialtyKey(specialty) {
-            return 'flashcardState_' + specialty;
+        function saveSessionState() {
+            if (!currentSessionKey) return;
+            const state = { cards: currentDeckCards, log: dom.logArea.value };
+            localStorage.setItem(getStorageKey(currentSessionKey), JSON.stringify(state));
         }
 
-        function saveState() {
-            if (!currentSpecialty) return;
-
-            // Salva apenas os cards da especialidade atual
-            const stateToSave = {
-                cards: flashcards,
-                log: logArea.value,
-                specialty: currentSpecialty
-            };
-            localStorage.setItem(getSpecialtyKey(currentSpecialty), JSON.stringify(stateToSave));
-            // Salva o log global (para manter o histórico da sessão, mas o log específico da especialidade é o que importa)
-            localStorage.setItem('flashcardLog', logArea.value);
+        function addToLog(message) {
+            const timestamp = new Date().toLocaleTimeString('pt-BR');
+            dom.logArea.value += `[${timestamp}] ${message}\n`;
+            dom.logArea.scrollTop = dom.logArea.scrollHeight;
         }
 
-        function loadState(specialty) {
-            const savedState = localStorage.getItem(getSpecialtyKey(specialty));
-            if (savedState) {
-                const state = JSON.parse(savedState);
-                
-                // Mapeia os cards salvos (com a cor de domínio) de volta para o allFlashcards
-                const savedCardsMap = new Map(state.cards.map(c => [c.id, c.masteryColor]));
-                
-                // Aplica as cores de domínio salvas nos cartões recém-carregados
-                // Filtra os cartões pertencentes à especialidade
-                const filteredCards = allFlashcards.filter(c => c.specialty === specialty).map(card => {
-                    const savedColor = savedCardsMap.get(card.id);
-                    return {
-                        ...card,
-                        masteryColor: savedColor || card.masteryColor // Usa a cor salva, ou a cor inicial
-                    };
-                });
-                
-                // Atualiza o estado da sessão
-                flashcards = filteredCards;
-                currentCardIndex = 0; // Começa sempre do primeiro ao carregar
-                logArea.value = state.log || '';
-
-                return true; 
-            }
-            return false; 
+        function logNewCardForSheet(card) {
+            const csvLine = [ card.id, `"${card.question}"`, `"${card.answer}"`, card.masteryColor, `"${card.specialty}"`, `"${card.tags}"` ].join(',');
+            addToLog(`NOVO CARD (COPIE PARA PLANILHA):\n${csvLine}\n`);
         }
 
-        async function fetchFlashcardsFromSheet() {
-            homeStatus.textContent = 'Buscando dados no CSV...';
+        // --- CARGA DE DADOS DA PLANILHA ---
+        async function fetchAndParseSheetData() {
             try {
                 const response = await fetch(GOOGLE_SHEET_URL);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 const csvText = await response.text();
-                
                 const lines = csvText.trim().split('\n');
-                // Remove o cabeçalho e lida com as aspas (para textos com vírgulas)
                 const header = lines.shift().split(',').map(h => h.trim().replace(/"/g, ''));
                 
-                // Encontra os índices das colunas, incluindo 'Especialidade'
-                const idx = {
+                const colIndexes = {
                     id: header.indexOf('Número'),
                     question: header.indexOf('Frente'),
                     answer: header.indexOf('Verso'),
                     color: header.indexOf('Cor'),
-                    specialty: header.indexOf('Especialidade') // Coluna agora obrigatória para este app
+                    specialty: header.indexOf('Especialidade'),
+                    tags: header.indexOf('Tags')
                 };
 
-                // Verifica se colunas críticas estão presentes (incluindo Especialidade)
-                if (idx.id === -1 || idx.question === -1 || idx.answer === -1 || idx.specialty === -1) {
-                    throw new Error("Colunas necessárias (Número, Frente, Verso, Especialidade) não encontradas no CSV. Por favor, verifique se todos os cabeçalhos estão corretos.");
+                if (Object.values(colIndexes).some(index => index < 0)) {
+                    throw new Error("Uma ou mais colunas essenciais não foram encontradas na planilha.");
                 }
 
-                allFlashcards = lines.map(line => {
-                    // Simples split por vírgula. Em cenários reais, um parser de CSV é necessário.
-                    const values = line.split(','); 
+                allCards = lines.map(line => {
+                    const values = line.split(',');
+                    const getValue = i => values[i] ? values[i].trim().replace(/^"|"$/g, '') : '';
+                    const color = getValue(colIndexes.color).toLowerCase() || 'gray';
                     
-                    const color = values[idx.color] ? values[idx.color].trim().toLowerCase() : 'gray';
-                    
-                    // Acessa a especialidade. Agora sabemos que idx.specialty existe.
-                    let specialty = values[idx.specialty] ? values[idx.specialty].trim() : 'Geral'; 
-                    
-
                     return {
-                        id: parseInt(values[idx.id], 10),
-                        question: values[idx.question] ? values[idx.question].trim().replace(/"/g, '') : '',
-                        answer: values[idx.answer] ? values[idx.answer].trim().replace(/"/g, '') : '',
-                        specialty: specialty.trim().replace(/"/g, ''), // Garante limpeza
-                        masteryColor: MASTERY_LEVELS[color] ? color : 'gray' 
+                        id: parseInt(getValue(colIndexes.id), 10),
+                        question: getValue(colIndexes.question),
+                        answer: getValue(colIndexes.answer),
+                        specialty: getValue(colIndexes.specialty) || 'Geral',
+                        tags: getValue(colIndexes.tags),
+                        masteryColor: MASTERY_LEVELS[color] ? color : 'gray'
                     };
-                }).filter(card => card.id && card.question); // Filtra entradas inválidas
-
-                homeStatus.textContent = `Carregados ${allFlashcards.length} cards. Pronto.`;
-                addToLog(`Carregados ${allFlashcards.length} cards iniciais.`);
+                }).filter(card => card.id && card.question);
 
             } catch (error) {
-                // ALTERADO: Garante que a mensagem de erro apareça na tela inicial (homeStatus)
-                const errorMessage = `ERRO DE CARGA: ${error.message}.`;
-                homeStatus.textContent = errorMessage; 
-                console.error('Fetch error:', error);
-                // Não retorna, permitindo que o fluxo de inicialização continue,
-                // mas a lista de especialidades estará vazia (allFlashcards.length === 0).
-            }
-        }
-        
-        function addToLog(message) {
-            const now = new Date();
-            const timestamp = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            logArea.value += `[${timestamp}] ${message}\n`;
-            logArea.scrollTop = logArea.scrollHeight; 
-        }
-
-        // --- FUNÇÕES DE NAVEGAÇÃO E TELA ---
-
-        function renderScreen(screen) {
-            homeScreen.classList.add('hidden');
-            studyScreen.classList.add('hidden');
-
-            if (screen === 'home') {
-                // Atualiza a lista de especialidades sempre que volta para home
-                renderSpecialtyList();
-                homeScreen.classList.remove('hidden');
-            } else if (screen === 'study') {
-                studyScreen.classList.remove('hidden');
+                console.error('Erro ao carregar dados da planilha:', error);
+                dom.homeContent.innerHTML += `<div class="p-4 mt-6 bg-red-100 border-l-4 border-red-500 text-red-800"><p class="font-bold">Erro de Carga:</p><p>${error.message}</p></div>`;
             }
         }
 
-        function extractSpecialties() {
-            const specialties = new Set();
-            allFlashcards.forEach(card => specialties.add(card.specialty));
-            return Array.from(specialties).sort();
+        // --- LÓGICA DE UI E NAVEGAÇÃO ---
+        function switchScreen(screenName) {
+            dom.homeScreen.classList.toggle('hidden', screenName !== 'home');
+            dom.studyScreen.classList.toggle('hidden', screenName !== 'study');
+            dom.logModal.classList.add('hidden');
+            dom.newCardModal.classList.add('hidden');
+            if (screenName === 'home') {
+                dom.searchInput.value = '';
+                renderHomeScreen();
+            }
         }
 
-        function renderSpecialtyList() {
-            specialtySidebar.innerHTML = '';
-            const specialties = extractSpecialties();
+        function createFolderElement(item, cards) {
+            const count = cards.length;
+            const colorCounts = cards.reduce((acc, card) => {
+                acc[card.masteryColor] = (acc[card.masteryColor] || 0) + 1;
+                return acc;
+            }, {});
 
-            if (specialties.length === 0) {
-                // Se a lista de cards estiver vazia, mostra a mensagem de erro (ou de carregamento)
-                if (allFlashcards.length === 0 && homeStatus.textContent.includes('ERRO')) {
-                     specialtySidebar.innerHTML = '<p class="text-sm text-red-500">Erro. Consulte o Status de Carga acima.</p>';
-                } else {
-                     specialtySidebar.innerHTML = '<p class="text-sm text-slate-500">Nenhuma especialidade encontrada. Verifique o CSV.</p>';
+            const colorBarHtml = ['red', 'orange', 'yellow', 'green', 'blue', 'gray'].map(color => {
+                const percentage = count > 0 ? ((colorCounts[color] || 0) / count) * 100 : 0;
+                return percentage > 0 ? `<div style="width:${percentage}%;" class="h-2 ${MASTERY_LEVELS[color].btnBg}"></div>` : '';
+            }).join('');
+
+            const folder = document.createElement('button');
+            folder.className = 'bg-white p-4 rounded-xl shadow-md border border-slate-200 text-left hover:shadow-lg hover:border-indigo-400 transition transform hover:scale-[1.02]';
+            folder.onclick = () => startStudySession(item);
+            folder.innerHTML = `
+                <div class="text-indigo-600 text-3xl mb-2"><i class="${currentFilterMode === 'specialty' ? 'ph-folder-open-fill' : 'ph-tag-fill'}"></i></div>
+                <h3 class="text-base font-bold text-slate-800 truncate mb-1">${item}</h3>
+                <p class="text-sm text-slate-500">${count} Cards</p>
+                <div class="flex w-full overflow-hidden rounded-full mt-2 border border-slate-200">${colorBarHtml}</div>
+            `;
+            return folder;
+        }
+
+        function renderHomeScreen(filter = '') {
+            dom.sidebarList.innerHTML = '';
+            dom.folderView.innerHTML = '';
+            
+            const itemsMap = new Map();
+            allCards.forEach(card => {
+                const key = card[currentFilterMode];
+                if (key && key.trim() !== '') {
+                    if (!itemsMap.has(key)) itemsMap.set(key, []);
+                    itemsMap.get(key).push(card);
                 }
+            });
+
+            const sortedItems = [...itemsMap.keys()].sort();
+            const filteredItems = sortedItems.filter(item => item.toLowerCase().includes(filter.toLowerCase()));
+
+            if (filteredItems.length === 0) {
+                const message = `<p class="text-sm text-slate-500 p-2">Nenhum item encontrado.</p>`;
+                dom.sidebarList.innerHTML = message;
+                dom.folderView.innerHTML = `<div class="col-span-full text-center p-8 text-slate-500">${message}</div>`;
                 return;
             }
 
-            specialties.forEach(specialty => {
-                const count = allFlashcards.filter(c => c.specialty === specialty).length;
-                const button = document.createElement('button');
-                button.textContent = `${specialty} (${count})`;
-                button.className = 'w-full text-left p-2 rounded-lg text-slate-700 font-medium hover:bg-indigo-100 transition-colors text-sm truncate';
-                button.addEventListener('click', () => startStudySession(specialty));
-                specialtySidebar.appendChild(button);
+            filteredItems.forEach(item => {
+                const cardsInDeck = itemsMap.get(item);
+                const sidebarButton = document.createElement('button');
+                sidebarButton.textContent = `${item} (${cardsInDeck.length})`;
+                sidebarButton.className = 'w-full text-left p-2 rounded-lg text-slate-700 font-medium hover:bg-indigo-100 text-sm truncate';
+                sidebarButton.onclick = () => startStudySession(item);
+                dom.sidebarList.appendChild(sidebarButton);
+                dom.folderView.appendChild(createFolderElement(item, cardsInDeck));
             });
         }
 
-        function startStudySession(specialty) {
-            currentSpecialty = specialty;
-            
-            // Tenta carregar o estado salvo daquela especialidade
-            const loaded = loadState(specialty);
+        function startStudySession(sessionKey) {
+            currentSessionKey = sessionKey;
+            const allDeckCards = allCards.filter(c => c[currentFilterMode] === sessionKey);
+            const savedState = localStorage.getItem(getStorageKey(currentSessionKey));
 
-            if (!loaded) {
-                // Se não houver estado salvo, filtra do allFlashcards (com cores iniciais)
-                flashcards = allFlashcards.filter(card => card.specialty === specialty);
-                // Inicializa o log com uma mensagem nova
-                logArea.value = `[${new Date().toLocaleTimeString('pt-BR')}] Iniciada nova sessão para: ${specialty} (${flashcards.length} cards).\n`;
+            if (savedState) {
+                const state = JSON.parse(savedState);
+                const savedColors = new Map(state.cards.map(c => [c.id, c.masteryColor]));
+                currentDeckCards = allDeckCards.map(card => ({
+                    ...card,
+                    masteryColor: savedColors.get(card.id) || card.masteryColor
+                }));
+                dom.logArea.value = state.log || '';
+                addToLog(`Sessão retomada para: ${sessionKey}.`);
             } else {
-                addToLog(`Sessão retomada para: ${specialty}.`);
+                currentDeckCards = allDeckCards;
+                dom.logArea.value = '';
+                addToLog(`Nova sessão iniciada para: ${sessionKey} (${currentDeckCards.length} cards).`);
             }
-            
+
             currentCardIndex = 0;
             isFlipped = false;
-
-            specialtyTitle.textContent = specialty.toUpperCase();
-            renderCard(); 
-            renderScreen('study');
+            dom.studyTitle.textContent = `${currentFilterMode.toUpperCase()}: ${sessionKey.toUpperCase()}`;
+            renderCard();
+            switchScreen('study');
         }
 
-        // --- FUNÇÕES DE RENDERIZAÇÃO E LÓGICA (Adaptadas) ---
-
-        function renderMasteryButtons() {
-            masteryControls.innerHTML = '';
-            for (const color in MASTERY_LEVELS) {
-                const level = MASTERY_LEVELS[color];
-                const button = document.createElement('button');
-                
-                const card = flashcards[currentCardIndex];
-                const isSelected = card && card.masteryColor === color;
-
-                // Adiciona o anel (ring) para a cor selecionada
-                const ringClass = isSelected ? `ring-4 ring-offset-2 ${MASTERY_LEVELS[color].ring}` : 'border-white';
-                
-                button.dataset.color = color;
-                button.className = `w-10 h-10 rounded-full border-2 shadow-lg transition-all transform hover:scale-110 ${level.btnBg} ${ringClass}`;
-                button.addEventListener('click', () => setMasteryColor(color));
-                masteryControls.appendChild(button);
-            }
-        }
-
+        // --- LÓGICA DO CARD DE ESTUDO ---
         function setMasteryColor(color) {
-            const card = flashcards[currentCardIndex];
+            const card = currentDeckCards[currentCardIndex];
             if (card.masteryColor !== color) {
                 card.masteryColor = color;
                 addToLog(`Card ${card.id} - Cor alterada para ${color}.`);
                 updateCardAppearance();
-                saveState(); // Salva estado no localStorage
+                saveSessionState();
+            }
+        }
+
+        function renderMasteryButtons() {
+            dom.masteryControls.innerHTML = '';
+            const card = currentDeckCards[currentCardIndex];
+            for (const color in MASTERY_LEVELS) {
+                const level = MASTERY_LEVELS[color];
+                const button = document.createElement('button');
+                const isSelected = card && card.masteryColor === color;
+                const ringClass = isSelected ? `ring-4 ring-offset-2 ${level.ring}` : 'border-white';
+                
+                button.className = `w-10 h-10 rounded-full border-2 shadow-lg transition-all transform hover:scale-110 ${level.btnBg} ${ringClass}`;
+                button.onclick = () => setMasteryColor(color);
+                dom.masteryControls.appendChild(button);
             }
         }
 
         function updateCardAppearance() {
-            if (!flashcards.length) return;
-            const currentColor = flashcards[currentCardIndex].masteryColor;
-            const masteryInfo = MASTERY_LEVELS[currentColor];
-
-            // 1. Atualizar cores dos botões de domínio (para mostrar o anel)
-            renderMasteryButtons(); 
-
-            // 2. Atualizar cor do card
-            const allBgClasses = Object.values(MASTERY_LEVELS).map(l => l.cardBg);
-            allBgClasses.push('bg-slate-50', 'bg-white');
-
-            cardFront.classList.remove(...allBgClasses);
-            cardBack.classList.remove(...allBgClasses);
-
-            cardFront.classList.add(masteryInfo.cardBg);
-            // Mantendo a lógica de cor do verso original, mas usando a cor de domínio
-            cardBack.classList.add(masteryInfo.cardBg);
+            if (!currentDeckCards.length) return;
+            const masteryInfo = MASTERY_LEVELS[currentDeckCards[currentCardIndex].masteryColor];
+            renderMasteryButtons();
+            
+            const allBgClasses = Object.values(MASTERY_LEVELS).map(l => l.cardBg).concat(['bg-slate-50', 'bg-white']);
+            dom.cardFront.classList.remove(...allBgClasses);
+            dom.cardBack.classList.remove(...allBgClasses);
+            dom.cardFront.classList.add(masteryInfo.cardBg);
+            dom.cardBack.classList.add(masteryInfo.cardBg);
         }
-        
-        function renderCard() {
-            if (!flashcards.length) {
-                cardFrontText.textContent = "Nenhum card para exibir.";
-                cardBackText.textContent = "Volte para a tela inicial.";
-                cardCounter.textContent = '0 cards.';
-                return;
-            };
 
-            const card = flashcards[currentCardIndex];
-            cardFrontText.textContent = card.question;
-            cardBackText.textContent = card.answer;
-            cardCounter.textContent = `Card ${currentCardIndex + 1} de ${flashcards.length}`;
-            
-            // Garante que o card esteja virado para a frente ao mudar
-            if (isFlipped) {
-                cardContainer.classList.remove('is-flipped');
-                isFlipped = false;
-                flipButton.textContent = 'Virar Card';
+        function renderCard() {
+            if (!currentDeckCards.length) {
+                dom.frontText.textContent = "Nenhum card.";
+                dom.backText.textContent = "Volte e selecione um deck.";
+                dom.cardCounter.textContent = '0 de 0';
+                return;
             }
+
+            const card = currentDeckCards[currentCardIndex];
+            dom.frontText.textContent = card.question;
+            dom.backText.textContent = card.answer;
+            dom.cardCounter.textContent = `Card ${currentCardIndex + 1} de ${currentDeckCards.length}`;
             
+            if (isFlipped) {
+                dom.cardContainer.classList.remove('is-flipped');
+                isFlipped = false;
+                dom.flipButton.textContent = 'Virar Card';
+            }
             updateCardAppearance();
         }
 
         function flipCard() {
-            if (!flashcards.length) return;
+            if (!currentDeckCards.length) return;
             isFlipped = !isFlipped;
-            cardContainer.classList.toggle('is-flipped');
-            flipButton.textContent = isFlipped ? 'Esconder Resposta' : 'Virar Card';
+            dom.cardContainer.classList.toggle('is-flipped');
+            dom.flipButton.textContent = isFlipped ? 'Esconder Resposta' : 'Virar Card';
         }
 
-        function nextCard() {
-            if (!flashcards.length) return;
-            currentCardIndex = (currentCardIndex + 1) % flashcards.length;
-            renderCard();
-        }
+        const nextCard = () => { if (!currentDeckCards.length) return; currentCardIndex = (currentCardIndex + 1) % currentDeckCards.length; renderCard(); };
+        const prevCard = () => { if (!currentDeckCards.length) return; currentCardIndex = (currentCardIndex - 1 + currentDeckCards.length) % currentDeckCards.length; renderCard(); };
 
-        function prevCard() {
-            if (!flashcards.length) return;
-            currentCardIndex = (currentCardIndex - 1 + flashcards.length) % flashcards.length;
-            renderCard();
-        }
-
-        // --- EVENT LISTENERS ---
-        flipButton.addEventListener('click', flipCard);
-        cardContainer.addEventListener('click', flipCard);
-        nextButton.addEventListener('click', nextCard);
-        prevButton.addEventListener('click', prevCard);
-        backToHomeButton.addEventListener('click', () => renderScreen('home')); // Botão de volta
-        
-        copyLogButton.addEventListener('click', () => {
-            logArea.select();
-            document.execCommand('copy');
-        });
-
-        // --- INICIALIZAÇÃO ---
-        async function initializeApp() {
-            // A carga inicial agora carrega *todos* os cards
-            await fetchFlashcardsFromSheet();
+        // --- INICIALIZAÇÃO E LISTENERS ---
+        function setupEventListeners() {
+            dom.flipButton.addEventListener('click', flipCard);
+            dom.cardContainer.addEventListener('click', flipCard);
+            dom.nextButton.addEventListener('click', nextCard);
+            dom.prevButton.addEventListener('click', prevCard);
+            dom.backToHomeButton.addEventListener('click', () => switchScreen('home'));
             
-            // Depois de carregar, renderiza a lista de especialidades
-            renderSpecialtyList();
+            dom.modeSpecialtyRadio.addEventListener('change', () => { currentFilterMode = 'specialty'; dom.searchInput.placeholder = 'Buscar especialidade...'; renderHomeScreen(); });
+            dom.modeTagRadio.addEventListener('change', () => { currentFilterMode = 'tags'; dom.searchInput.placeholder = 'Buscar tag...'; renderHomeScreen(); });
+            dom.searchInput.addEventListener('input', () => renderHomeScreen(dom.searchInput.value));
 
-            // Exibe a tela inicial por padrão
-            renderScreen('home');
+            // Modals
+            [dom.logButtonHome, dom.logButtonStudy].forEach(btn => btn.addEventListener('click', () => dom.logModal.classList.remove('hidden')));
+            dom.closeLogButton.addEventListener('click', () => dom.logModal.classList.add('hidden'));
+            dom.copyLogButton.addEventListener('click', () => { dom.logArea.select(); document.execCommand('copy'); });
+
+            dom.addCardButton.addEventListener('click', () => {
+                dom.newCardSpecialty.value = currentFilterMode === 'specialty' && currentSessionKey ? currentSessionKey : '';
+                dom.newCardModal.classList.remove('hidden');
+            });
+            dom.closeNewCardButton.addEventListener('click', () => dom.newCardModal.classList.add('hidden'));
+            dom.newCardForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const newCard = {
+                    id: (Math.max(0, ...allCards.map(c => c.id)) + 1),
+                    question: dom.newCardQuestion.value.trim(),
+                    answer: dom.newCardAnswer.value.trim(),
+                    specialty: dom.newCardSpecialty.value.trim() || 'Geral',
+                    tags: dom.newCardTags.value.trim(),
+                    masteryColor: 'gray'
+                };
+                if (!newCard.question || !newCard.answer) return;
+                
+                allCards.push(newCard);
+                logNewCardForSheet(newCard);
+                dom.newCardForm.reset();
+                dom.newCardModal.classList.add('hidden');
+                renderHomeScreen();
+            });
+        }
+
+        async function initializeApp() {
+            switchScreen('home');
+            await fetchAndParseSheetData();
+            renderHomeScreen();
+            setupEventListeners();
         }
 
         initializeApp();
-
     </script>
 
 </body>
 </html>
+
