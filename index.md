@@ -9,7 +9,7 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-        html, body { height: 100%; }
+        html, body, #main-container { height: 100%; }
         body { font-family: 'Inter', sans-serif; }
         .card-container { perspective: 1000px; }
         .flashcard { transform-style: preserve-3d; transition: transform 0.6s; }
@@ -117,6 +117,20 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- SESSÕES RÁPIDAS -->
+                    <div id="quick-sessions" class="p-4 bg-slate-50 rounded-lg border border-slate-200 mb-6">
+                        <h3 class="text-lg font-bold text-slate-700 mb-3">Sessões Rápidas</h3>
+                        <div class="flex flex-col sm:flex-row gap-4">
+                            <button id="review-red-button" class="flex-1 py-2 px-4 bg-red-100 text-red-800 font-bold rounded-lg shadow-sm hover:bg-red-200 border border-red-200 transition-colors text-sm flex items-center justify-center space-x-2">
+                                <i class="ph-fire-fill text-lg"></i><span>Revisar Cards "Revisar"</span>
+                            </button>
+                            <button id="review-orange-red-button" class="flex-1 py-2 px-4 bg-orange-100 text-orange-800 font-bold rounded-lg shadow-sm hover:bg-orange-200 border border-orange-200 transition-colors text-sm flex items-center justify-center space-x-2">
+                                <i class="ph-warning-fill text-lg"></i><span>Revisar "Difíceis" + "Revisar"</span>
+                            </button>
+                        </div>
+                    </div>
+
 
                     <p id="folder-view-message" class="text-slate-600 mb-6">Selecione filtros ao lado para começar.</p>
                     <div id="folder-view" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -267,6 +281,8 @@
             statsButton: document.getElementById('stats-button'),
             shuffleCheckbox: document.getElementById('shuffle-checkbox'),
             colorFilterButtons: document.getElementById('color-filter-buttons'),
+            reviewRedButton: document.getElementById('review-red-button'),
+            reviewOrangeRedButton: document.getElementById('review-orange-red-button'),
         };
 
         // --- PERSISTÊNCIA & LOG ---
@@ -292,7 +308,7 @@
                 if (char === '"') {
                     if (inQuotes && line[i+1] === '"') {
                         current += '"';
-                        i++; // Skip next quote
+                        i++;
                     } else {
                         inQuotes = !inQuotes;
                     }
@@ -312,11 +328,11 @@
                 const response = await fetch(GOOGLE_SHEET_URL);
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 const csvText = await response.text();
-                const lines = csvText.trim().split('\n');
-                const header = lines.shift().split(',').map(h => h.trim().replace(/"/g, ''));
+                const lines = csvText.trim().split(/\r\n|\n/);
+                const header = parseCsvLine(lines.shift()).map(h => h.trim());
                 
                 const colIndexes = { id: header.indexOf('Número'), question: header.indexOf('Frente'), answer: header.indexOf('Verso'), color: header.indexOf('Cor'), specialty: header.indexOf('Especialidade'), tags: header.indexOf('Tags') };
-                if (Object.values(colIndexes).some(index => index < 0)) throw new Error("Colunas essenciais não encontradas na planilha.");
+                if (Object.values(colIndexes).some(index => index < 0)) throw new Error("Colunas essenciais não encontradas na planilha: " + JSON.stringify(header));
 
                 allCards = lines.map(line => {
                     const values = parseCsvLine(line);
@@ -330,20 +346,18 @@
                 dom.homeContent.innerHTML += `<div class="p-4 mt-6 bg-red-100 border-l-4 border-red-500 text-red-800"><p class="font-bold">Erro de Carga:</p><p>${error.message}</p></div>`;
             }
         }
-
+        
         // --- LÓGICA DE UI E NAVEGAÇÃO ---
         function switchScreen(screenName) {
             dom.homeScreen.classList.toggle('hidden', screenName !== 'home');
             dom.studyScreen.classList.toggle('hidden', screenName !== 'study');
             if (screenName === 'home') renderHomeScreen();
         }
-        
         function switchHomeView(viewName) {
             dom.statsScreen.classList.toggle('hidden', viewName !== 'stats');
             dom.folderViewContainer.classList.toggle('hidden', viewName !== 'folders');
             dom.homeTitle.textContent = viewName === 'stats' ? 'Estatísticas de Domínio' : 'Revisão Ativa';
         }
-
         function createProgressBar(cards) {
             const count = cards.length;
             if (count === 0) return '<div class="flex w-full h-2 bg-slate-200 rounded-full"></div>';
@@ -354,7 +368,6 @@
             }).join('');
             return `<div class="flex w-full overflow-hidden rounded-full mt-2 border border-slate-200">${colorBarHtml}</div>`;
         }
-
         function renderHomeScreen() {
             dom.folderView.innerHTML = '';
             
@@ -442,6 +455,7 @@
                     <button data-mode="geral" class="px-3 py-1 text-sm font-semibold rounded-md bg-white text-indigo-700 shadow">Geral</button>
                     <button data-mode="specialty" class="px-3 py-1 text-sm font-semibold rounded-md text-slate-600">Por Especialidade</button>
                     <button data-mode="tags" class="px-3 py-1 text-sm font-semibold rounded-md text-slate-600">Por Tag</button>
+                    <button data-mode="color" class="px-3 py-1 text-sm font-semibold rounded-md text-slate-600">Por Cor</button>
                 </div>
                 <div id="stats-content" class="space-y-4"></div>
             `;
@@ -459,7 +473,8 @@
 
             let currentStatsMode = 'geral';
             let currentChartType = 'colunas';
-            let currentTag = null;
+            let selectedTag = null;
+            let selectedColor = null;
 
             const renderContent = () => {
                 const statsContent = document.getElementById('stats-content');
@@ -499,13 +514,46 @@
                     const tags = Array.from(new Set(allCards.flatMap(c => c.tags.split(',').map(t => t.trim())))).filter(Boolean).sort();
                     const tagList = document.createElement('div');
                     tagList.className = 'flex flex-wrap gap-2 mb-4';
-                    tagList.innerHTML = tags.map(tag => `<button data-tag="${tag}" class="px-3 py-1 text-sm rounded-full border ${currentTag === tag ? 'bg-indigo-600 text-white' : 'bg-white hover:bg-slate-100'}">${tag}</button>`).join('');
+                    tagList.innerHTML = tags.map(tag => `<button data-tag="${tag}" class="px-3 py-1 text-sm rounded-full border ${selectedTag === tag ? 'bg-indigo-600 text-white' : 'bg-white hover:bg-slate-100'}">${tag}</button>`).join('');
                     statsContent.appendChild(tagList);
                     
-                    tagList.querySelectorAll('button').forEach(btn => btn.onclick = () => { currentTag = btn.dataset.tag; renderContent(); });
+                    tagList.querySelectorAll('button').forEach(btn => btn.onclick = () => { selectedTag = btn.dataset.tag; renderContent(); });
 
-                    if(currentTag) {
-                        render(currentTag, allCards.filter(c => c.tags.includes(currentTag)));
+                    if(selectedTag) {
+                        render(selectedTag, allCards.filter(c => c.tags.includes(selectedTag)));
+                    }
+                } else if (currentStatsMode === 'color') {
+                    const colorList = document.createElement('div');
+                    colorList.className = 'flex flex-wrap gap-2 mb-4';
+                    colorList.innerHTML = COLOR_ORDER.map(color => `<button data-color="${color}" class="px-3 py-1 text-sm font-semibold rounded-full border ${selectedColor === color ? 'text-white' : ''} ${MASTERY_LEVELS[color].btnBg}">${MASTERY_LEVELS[color].name}</button>`).join('');
+                    statsContent.appendChild(colorList);
+                    
+                    colorList.querySelectorAll('button').forEach(btn => btn.onclick = () => { selectedColor = btn.dataset.color; renderContent(); });
+
+                    if(selectedColor){
+                        const cardsOfColor = allCards.filter(c => c.masteryColor === selectedColor);
+                        const specialtyCounts = cardsOfColor.reduce((acc, card) => { acc[card.specialty] = (acc[card.specialty] || 0) + 1; return acc; }, {});
+                        const tagCounts = cardsOfColor.flatMap(c => c.tags.split(',').map(t => t.trim())).filter(Boolean).reduce((acc, tag) => { acc[tag] = (acc[tag] || 0) + 1; return acc; }, {});
+                        
+                        const topSpecialties = Object.entries(specialtyCounts).sort((a,b) => b[1] - a[1]).slice(0, 5);
+                        const topTags = Object.entries(tagCounts).sort((a,b) => b[1] - a[1]).slice(0, 5);
+
+                        const container = document.createElement('div');
+                        container.className = 'p-4 bg-white rounded-lg border';
+                        container.innerHTML = `
+                            <h3 class="text-lg font-bold mb-3">Análise da Cor: ${MASTERY_LEVELS[selectedColor].name}</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <h4 class="font-semibold text-slate-800 mb-2">Especialidades mais Frequentes</h4>
+                                    <ul class="text-sm space-y-1 text-slate-600">${topSpecialties.map(([spec, count]) => `<li><strong>${spec}:</strong> ${count} cards</li>`).join('') || '<li>Nenhuma.</li>'}</ul>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-slate-800 mb-2">Tags mais Frequentes</h4>
+                                    <ul class="text-sm space-y-1 text-slate-600">${topTags.map(([tag, count]) => `<li><strong>${tag}:</strong> ${count} cards</li>`).join('') || '<li>Nenhuma.</li>'}</ul>
+                                </div>
+                            </div>
+                        `;
+                        statsContent.appendChild(container);
                     }
                 }
             };
@@ -521,21 +569,24 @@
                 });
             };
 
-            document.getElementById('stats-filter-mode').addEventListener('click', e => { if(e.target.tagName === 'BUTTON') { currentStatsMode = e.target.dataset.mode; currentTag = null; updateActiveButton('stats-filter-mode', currentStatsMode); renderContent(); } });
+            document.getElementById('stats-filter-mode').addEventListener('click', e => { if(e.target.tagName === 'BUTTON') { currentStatsMode = e.target.dataset.mode; selectedTag = null; selectedColor = null; updateActiveButton('stats-filter-mode', currentStatsMode); renderContent(); } });
             document.getElementById('stats-chart-type').addEventListener('click', e => { if(e.target.tagName === 'BUTTON') { currentChartType = e.target.dataset.type; updateActiveButton('stats-chart-type', currentChartType); renderContent(); } });
             
             renderContent();
         }
 
-        function startStudySession(sessionKey, cardsInDeck) {
-            let deckToStudy = [...cardsInDeck];
+        function startStudySession(sessionKey, cardsInDeck, quickSessionConfig = null) {
+            let deckToStudy = cardsInDeck ? [...cardsInDeck] : [...allCards];
 
-            if (activeColorFilters.length > 0) {
+            if(quickSessionConfig) {
+                deckToStudy = deckToStudy.filter(card => quickSessionConfig.colors.includes(card.masteryColor));
+                sessionKey = quickSessionConfig.title;
+            } else if (activeColorFilters.length > 0) {
                 deckToStudy = deckToStudy.filter(card => activeColorFilters.includes(card.masteryColor));
             }
 
             if (deckToStudy.length === 0) {
-                alert('Nenhum card encontrado com os filtros de cor selecionados para este deck.');
+                alert(`Nenhum card encontrado para "${sessionKey}" com os filtros aplicados.`);
                 return;
             }
 
@@ -546,15 +597,11 @@
             currentSessionKey = sessionKey;
             const savedStateJSON = localStorage.getItem(getStorageKey(currentSessionKey));
             
-            if (savedStateJSON) {
+            if (savedStateJSON && !quickSessionConfig) {
                 const savedState = JSON.parse(savedStateJSON);
                 const savedColors = new Map(savedState.cards.map(c => [c.id, c.masteryColor]));
                 
-                cardsInDeck.forEach(originalCard => {
-                    if(savedColors.has(originalCard.id)){
-                         originalCard.masteryColor = savedColors.get(originalCard.id);
-                    }
-                });
+                deckToStudy.forEach(card => { if(savedColors.has(card.id)){ card.masteryColor = savedColors.get(card.id); } });
 
                 dom.logArea.value = savedState.log || '';
                 addToLog(`Sessão retomada para: ${sessionKey}.`);
@@ -700,6 +747,10 @@
                 switchHomeView('stats');
                 renderStatsScreen();
             });
+            
+            dom.reviewRedButton.addEventListener('click', () => startStudySession('Revisão de Cards "Revisar"', null, { colors: ['red'], title: 'Revisão: Cards para Revisar' }));
+            dom.reviewOrangeRedButton.addEventListener('click', () => startStudySession('Revisão de Pontos Fracos', null, { colors: ['red', 'orange'], title: 'Revisão: Pontos Fracos' }));
+
 
             dom.filterControls.addEventListener('change', e => {
                 if (e.target.type === 'checkbox') {
@@ -725,7 +776,7 @@
         function setupLockScreen() {
             dom.passwordForm.addEventListener('submit', (e) => {
                 e.preventDefault();
-                if (dom.passwordInput.value.trim().toLowerCase() === 'malek') {
+                if (dom.passwordInput.value.trim().toLowerCase() === 'O2') {
                     dom.lockScreen.classList.add('hidden');
                     dom.mainContainer.classList.remove('hidden');
                     initializeApp();
