@@ -59,13 +59,9 @@
                     <p class="font-semibold mb-1">Status da Carga:</p>
                     <p id="home-status">Carregando dados da planilha...</p>
                 </div>
+                
+                <!-- REMOVIDO: Bloco com a explicação das cores. -->
 
-                <h3 class="text-lg font-semibold text-slate-700 mt-8 mb-3">Como Usar as Cores de Domínio:</h3>
-                <ul class="list-disc list-inside space-y-1 text-slate-600 ml-4 text-sm">
-                    <li><span class="font-bold text-red-500">Vermelho:</span> Não sei / Muito Difícil.</li>
-                    <li><span class="font-bold text-yellow-500">Amarelo:</span> Precisa Revisar.</li>
-                    <li><span class="font-bold text-green-500">Verde:</span> Dominado / Fácil.</li>
-                </ul>
             </div>
         </div>
 
@@ -233,18 +229,18 @@
                 // Remove o cabeçalho e lida com as aspas (para textos com vírgulas)
                 const header = lines.shift().split(',').map(h => h.trim().replace(/"/g, ''));
                 
-                // Encontra os índices das colunas, adicionando 'Especialidade'
+                // Encontra os índices das colunas, incluindo 'Especialidade'
                 const idx = {
                     id: header.indexOf('Número'),
                     question: header.indexOf('Frente'),
                     answer: header.indexOf('Verso'),
                     color: header.indexOf('Cor'),
-                    specialty: header.indexOf('Especialidade') // Nova coluna!
+                    specialty: header.indexOf('Especialidade') // Coluna agora obrigatória para este app
                 };
 
-                // Verifica se colunas críticas estão presentes
+                // Verifica se colunas críticas estão presentes (incluindo Especialidade)
                 if (idx.id === -1 || idx.question === -1 || idx.answer === -1 || idx.specialty === -1) {
-                    throw new Error("Colunas necessárias (Número, Frente, Verso, Especialidade) não encontradas no CSV.");
+                    throw new Error("Colunas necessárias (Número, Frente, Verso, Especialidade) não encontradas no CSV. Por favor, verifique se todos os cabeçalhos estão corretos.");
                 }
 
                 allFlashcards = lines.map(line => {
@@ -252,7 +248,10 @@
                     const values = line.split(','); 
                     
                     const color = values[idx.color] ? values[idx.color].trim().toLowerCase() : 'gray';
-                    const specialty = values[idx.specialty] ? values[idx.specialty].trim() : 'Geral';
+                    
+                    // Acessa a especialidade. Agora sabemos que idx.specialty existe.
+                    let specialty = values[idx.specialty] ? values[idx.specialty].trim() : 'Geral'; 
+                    
 
                     return {
                         id: parseInt(values[idx.id], 10),
@@ -261,13 +260,13 @@
                         specialty: specialty.trim().replace(/"/g, ''), // Garante limpeza
                         masteryColor: MASTERY_LEVELS[color] ? color : 'gray' 
                     };
-                }).filter(card => card.id && card.question && card.specialty); // Filtra entradas inválidas
+                }).filter(card => card.id && card.question); // Filtra entradas inválidas
 
                 homeStatus.textContent = `Carregados ${allFlashcards.length} cards. Pronto.`;
                 addToLog(`Carregados ${allFlashcards.length} cards iniciais.`);
 
             } catch (error) {
-                homeStatus.textContent = `Erro ao carregar dados: ${error.message}`;
+                homeStatus.textContent = `ERRO FATAL: ${error.message}`;
                 cardCounter.textContent = 'Erro ao carregar os cards.';
                 console.error('Fetch error:', error);
             }
@@ -287,6 +286,8 @@
             studyScreen.classList.add('hidden');
 
             if (screen === 'home') {
+                // Atualiza a lista de especialidades sempre que volta para home
+                renderSpecialtyList();
                 homeScreen.classList.remove('hidden');
             } else if (screen === 'study') {
                 studyScreen.classList.remove('hidden');
