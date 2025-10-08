@@ -224,7 +224,7 @@
 
     <script>
         // --- CONSTANTES E CONFIGURAÇÃO ---
-        const originalSheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTuKOdGRgn_JIk3jsVorWCXFtAuewmXj75vNb_2okDq9uG2ladBckiWoB8-26mh1SlndcUxIpo1TB-D/pub?gid=0&single=true&output=csv';
+        const originalSheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTuKOdGRgn_JIk3jsVorWCXFtAuewmXj75vNb_2okDq9uG2ladBckiWoB8-26mh1SlndcUxIpo1TB-D/pub?gid=0&single=true&output=csv](https://docs.google.com/spreadsheets/d/e/2PACX-1vTuKOdGRgn_JIk3jsVorWCXFtAuewmXj75vNb_2okDq9uG2ladBckiWoB8-26mh1SlndcUxIpo1TB-D/pub?gid=0&single=true&output=csv';
         const GOOGLE_SHEET_URL = 'https://corsproxy.io/?' + encodeURIComponent(originalSheetUrl);
         const MASTERY_LEVELS = {'gray': { name: 'Padrão', cardBg: 'bg-white', btnBg: 'bg-slate-300', ring: 'ring-slate-400', hex: '#cbd5e1'}, 'red': { name: 'Revisar', cardBg: 'bg-red-100', btnBg: 'bg-red-400', ring: 'ring-red-400', hex: '#f87171'}, 'orange': { name: 'Difícil', cardBg: 'bg-orange-100', btnBg: 'bg-orange-400', ring: 'ring-orange-400', hex: '#fb923c'}, 'yellow': { name: 'Médio', cardBg: 'bg-yellow-100', btnBg: 'bg-yellow-400', ring: 'ring-yellow-400', hex: '#facc15'}, 'green': { name: 'Fácil', cardBg: 'bg-green-100', btnBg: 'bg-green-400', ring: 'ring-green-400', hex: '#4ade80'}, 'blue': { name: 'Dominado', cardBg: 'bg-blue-100', btnBg: 'bg-blue-400', ring: 'ring-blue-400', hex: '#60a5fa'}};
         const COLOR_ORDER = ['red', 'orange', 'yellow', 'green', 'blue', 'gray'];
