@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Importar/Exportar Cards - App de Estudos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        html, body { height: 100%; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(-45deg, #111827, #1e1b4b, #312e81, #1e293b);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+        }
+        @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="text-slate-200">
+
+    <div id="loading-screen" class="flex items-center justify-center h-full">
+        <div class="animate-spin inline-block w-8 h-8 border-4 border-t-4 border-indigo-500 border-opacity-25 rounded-full"></div>
+    </div>
+
+    <div id="main-content" class="w-full max-w-6xl mx-auto h-full flex-col justify-center p-4 md:p-6 hidden">
+        <div class="w-full bg-slate-900/70 backdrop-blur-xl border border-slate-700/50 rounded-3xl shadow-2xl shadow-black/30 p-6 md:p-8" style="animation: fadeIn 0.5s ease forwards;">
+            <header class="flex justify-between items-center mb-8">
+                <h1 class="text-3xl font-extrabold text-white">Gestão de Cards</h1>
+                <a href="flashcards.html" class="group flex items-center space-x-2 text-sm font-semibold text-slate-400 hover:text-indigo-400 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0zm3.5 7.5a.5.5 0 0 1 0 1H5.707l2.147 2.146a.5.5 0 0 1-.708.708l-3-3a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L5.707 7.5H11.5z"/></svg>
+                    <span>Voltar</span>
+                </a>
+            </header>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Seção de Importação -->
+                <div>
+                    <h2 class="text-xl font-bold text-white mb-4">Importar Cards</h2>
+                    <form id="import-form">
+                        <p class="text-sm text-slate-400 mb-2">Cole seus cards abaixo no formato:</p>
+                        <p class="text-xs text-slate-500 bg-slate-900 p-2 rounded-md mb-4 font-mono">Pergunta ; Resposta ; tag1, tag2</p>
+                        
+                        <textarea id="import-textarea" required rows="10" class="w-full p-2 bg-slate-800 border border-slate-700 rounded-md mb-4 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Qual a capital do Brasil? ; Brasília ; geografia, brasil..."></textarea>
+                        
+                        <div>
+                            <label for="import-specialty" class="block text-sm font-medium text-slate-400">Especialidade para estes cards</label>
+                            <input type="text" id="import-specialty" required class="mt-1 w-full p-2 bg-slate-800 border border-slate-700 rounded-md focus:ring-indigo-500 focus:border-indigo-500" placeholder="Ex: Biologia Celular">
+                        </div>
+
+                        <div class="pt-6">
+                            <button type="submit" class="w-full py-2.5 px-4 bg-indigo-600 text-white font-bold rounded-lg shadow-md hover:bg-indigo-700 transition-colors">Importar</button>
+                        </div>
+                        <p id="import-message" class="text-center mt-4 text-sm hidden"></p>
+                    </form>
+                </div>
+
+                <!-- Seção de Exportação -->
+                <div class="flex flex-col">
+                    <h2 class="text-xl font-bold text-white mb-4">Exportar Cards</h2>
+                    <p class="text-sm text-slate-400 mb-4">Use os filtros para selecionar os cards que deseja exportar.</p>
+                    
+                    <div class="bg-slate-800/50 p-4 rounded-lg border border-slate-700/50 mb-4">
+                        <input type="text" id="export-search-input" placeholder="Buscar no conteúdo..." class="w-full p-2 mb-3 bg-slate-700 border border-slate-600 rounded-lg text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                        <div id="export-filter-controls" class="grid grid-cols-2 gap-4 max-h-40 overflow-y-auto pr-2">
+                           <p class="text-sm text-slate-500 col-span-2">Carregando filtros...</p>
+                        </div>
+                    </div>
+                    
+                    <p id="export-count" class="text-center text-sm font-semibold text-indigo-400 mb-4">0 cards encontrados</p>
+
+                    <textarea id="export-textarea" readonly rows="6" class="w-full p-2 bg-slate-900 border border-slate-700 rounded-md mb-4 flex-grow" placeholder="Seus cards filtrados aparecerão aqui..."></textarea>
+                    
+                    <div class="pt-2">
+                        <button id="export-button" class="w-full py-2.5 px-4 bg-slate-700 text-white font-bold rounded-lg shadow-md hover:bg-slate-600 transition-colors">Copiar Texto</button>
+                    </div>
+                    <p id="export-message" class="text-center mt-4 text-sm hidden"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, doc, writeBatch, serverTimestamp, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const Config = {
+            MASTERY_LEVELS: { 'gray':{name:'Padrão',hex:'#64748b'}, 'red':{name:'Revisar',hex:'#ef4444'}, 'orange':{name:'Difícil',hex:'#f97316'}, 'yellow':{name:'Médio',hex:'#eab308'}, 'green':{name:'Fácil',hex:'#22c55e'}, 'blue':{name:'Dominado',hex:'#3b82f6'}},
+            COLOR_ORDER: ['red', 'orange', 'yellow', 'green', 'blue', 'gray'],
+            firebaseConfig: {
+                apiKey: "AIzaSyAJ7fpCQPimWgcJuYiLbCZ5Rf5YUgMVZ2Q",
+                authDomain: "ghus-app.firebaseapp.com",
+                projectId: "ghus-app",
+                storageBucket: "ghus-app.firebasestorage.app",
+                messagingSenderId: "1047907929485",
+                appId: "1:1047907929485:web:cba05f2850df61d201c1c4",
+            }
+        };
+
+        const app = initializeApp(Config.firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let authUser = null;
+        let allCards = [];
+
+        const DOM = {
+            loadingScreen: document.getElementById('loading-screen'),
+            mainContent: document.getElementById('main-content'),
+            importForm: document.getElementById('import-form'),
+            importTextarea: document.getElementById('import-textarea'),
+            importSpecialty: document.getElementById('import-specialty'),
+            importMessage: document.getElementById('import-message'),
+            exportButton: document.getElementById('export-button'),
+            exportTextarea: document.getElementById('export-textarea'),
+            exportMessage: document.getElementById('export-message'),
+            exportFilterControls: document.getElementById('export-filter-controls'),
+            exportSearchInput: document.getElementById('export-search-input'),
+            exportCount: document.getElementById('export-count'),
+        };
+
+        let authInitialized = false;
+        const unsubscribe = onAuthStateChanged(auth, user => {
+            authInitialized = true;
+            unsubscribe();
+            if (user) {
+                authUser = user;
+                DOM.loadingScreen.style.display = 'none';
+                DOM.mainContent.style.display = 'flex';
+                loadAllCards();
+            } else {
+                signInAnonymously(auth).then(cred => {
+                    authUser = cred.user;
+                    DOM.loadingScreen.style.display = 'none';
+                    DOM.mainContent.style.display = 'flex';
+                    loadAllCards();
+                }).catch(() =>  window.location.href = 'index.html');
+            }
+        });
+        setTimeout(() => { if (!authInitialized) window.location.href = 'index.html'; }, 3000);
+
+        function showMessage(element, message, isError = false) { /* ... */ }
+
+        async function handleImportSubmit(e) { /* ... */ }
+
+        function loadAllCards() {
+            onSnapshot(collection(db, 'flashcards'), (snapshot) => {
+                allCards = snapshot.docs.map(doc => doc.data());
+                renderExportFilters();
+                applyExportFilters();
+            });
+        }
+
+        function renderExportFilters() {
+            const createSection = (title, items, type) => {
+                if (items.length === 0) return '';
+                const itemsHtml = items.map(item => {
+                    const color = Config.MASTERY_LEVELS[item];
+                    const label = color ? color.name : item;
+                    const colorDot = color ? `<span class="w-3 h-3 rounded-full" style="background-color: ${color.hex}"></span>` : '';
+                    return `<label class="flex items-center space-x-2 text-sm text-slate-300 hover:bg-slate-700/50 p-1 rounded-md cursor-pointer">${colorDot}<input type="checkbox" data-type="${type}" value="${item}" class="sr-only peer"><div class="w-4 h-4 bg-slate-600 rounded border border-slate-500 peer-checked:bg-indigo-500 peer-checked:border-indigo-500 flex items-center justify-center shrink-0"><svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-white hidden peer-checked:block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg></div><span>${label}</span></label>`
+                }).join('');
+                return `<div><h3 class="font-bold text-slate-300 mb-2">${title}</h3><div class="space-y-1">${itemsHtml}</div></div>`;
+            };
+            
+            const specialties = [...new Set(allCards.map(c => c.specialty || 'Geral'))].sort();
+            const tags = [...new Set(allCards.flatMap(c => (c.tags || '').split(',').map(t => t.trim()).filter(Boolean)))].sort();
+
+            DOM.exportFilterControls.innerHTML = createSection('Especialidades', specialties, 'specialties') + createSection('Tags', tags, 'tags') + createSection('Cores', Config.COLOR_ORDER, 'colors');
+        }
+
+        function applyExportFilters() {
+            const filters = {
+                specialties: [...DOM.exportFilterControls.querySelectorAll('input[data-type="specialties"]:checked')].map(i => i.value),
+                tags: [...DOM.exportFilterControls.querySelectorAll('input[data-type="tags"]:checked')].map(i => i.value),
+                colors: [...DOM.exportFilterControls.querySelectorAll('input[data-type="colors"]:checked')].map(i => i.value),
+                search: DOM.exportSearchInput.value.toLowerCase()
+            };
+
+            const filteredCards = allCards.filter(card => {
+                const specMatch = filters.specialties.length === 0 || filters.specialties.includes(card.specialty || 'Geral');
+                const cardTags = (card.tags || '').split(',').map(t => t.trim());
+                const tagMatch = filters.tags.length === 0 || filters.tags.some(t => cardTags.includes(t));
+                const colorMatch = filters.colors.length === 0 || filters.colors.includes(card.masterycolor);
+                const searchMatch = filters.search === '' || (card.question || '').toLowerCase().includes(filters.search) || (card.answer || '').toLowerCase().includes(filters.search);
+                return specMatch && tagMatch && colorMatch && searchMatch;
+            });
+            
+            DOM.exportCount.textContent = `${filteredCards.length} card(s) encontrado(s)`;
+            DOM.exportTextarea.value = filteredCards.map(card => `${card.question} ; ${card.answer} ; ${card.tags || ''}`).join('\n');
+        }
+
+        function copyExportText() {
+            if (DOM.exportTextarea.value.trim() === '') {
+                showMessage(DOM.exportMessage, 'Nenhum texto para copiar.', true);
+                return;
+            }
+            navigator.clipboard.writeText(DOM.exportTextarea.value)
+                .then(() => showMessage(DOM.exportMessage, 'Texto copiado para a área de transferência!', false))
+                .catch(() => showMessage(DOM.exportMessage, 'Falha ao copiar. Por favor, copie manualmente.', true));
+        }
+
+        DOM.importForm.addEventListener('submit', handleImportSubmit);
+        DOM.exportButton.addEventListener('click', copyExportText);
+        DOM.exportFilterControls.addEventListener('change', applyExportFilters);
+        DOM.exportSearchInput.addEventListener('input', applyExportFilters);
+
+    </script>
+</body>
+</html>
+
