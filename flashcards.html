@@ -71,7 +71,13 @@
             </div>
             
             <div id="home-content" class="flex-grow p-6 md:p-8 overflow-y-auto">
-                <h1 class="text-4xl font-extrabold text-white mb-6">Revisão Ativa</h1>
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-4xl font-extrabold text-white">Revisão Ativa</h1>
+                    <button id="review-filtered-button" class="hidden group flex items-center justify-center space-x-2 py-2.5 px-4 bg-gradient-to-r from-green-500 to-teal-500 text-white font-semibold rounded-lg shadow-lg hover:shadow-green-500/40 transform hover:scale-105 transition-all text-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11.596 8.697l-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393z"/></svg>
+                        <span id="review-filtered-text">Revisar Conjunto</span>
+                    </button>
+                </div>
                 <div id="loading" class="text-center p-8"><div class="animate-spin inline-block w-6 h-6 border-4 border-t-4 border-indigo-500 border-opacity-25 rounded-full mr-2"></div><p class="text-lg font-medium text-slate-400">Carregando flashcards...</p></div>
                 <p id="folder-view-message" class="text-slate-400 mb-6 hidden">Selecione filtros ao lado para começar.</p>
                 <div id="folder-view" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"></div>
@@ -90,7 +96,6 @@
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- CONFIG & STATE ---
         const Config = {
             firebase: {
                 apiKey: "AIzaSyAJ7fpCQPimWgcJuYiLbCZ5Rf5YUgMVZ2Q",
@@ -112,17 +117,9 @@
             VALUE_TO_COLOR_MAP: { 0: 'gray', 1: 'red', 2: 'orange', 3: 'yellow', 4: 'green', 5: 'blue' }
         };
 
-        const State = {
-            allCards: [],
-            currentDeckCards: [],
-            currentCardIndex: 0,
-            isFlipped: false,
-            authUser: null
-        };
-
+        const State = { allCards: [], currentDeckCards: [], currentCardIndex: 0, isFlipped: false, authUser: null, filteredCards: [] };
         const DOM = {};
 
-        // --- SERVICES ---
         const FirebaseService = {
             db: null,
             init() {
@@ -136,11 +133,7 @@
                     if (user) {
                         State.authUser = user;
                         onSnapshot(collection(this.db, 'flashcards'), snapshot => {
-                            const cards = snapshot.docs.map(doc => ({
-                                ...doc.data(),
-                                id: doc.id,
-                                masterycolor: this.convertMastery(doc.data().masterycolor)
-                            }));
+                            const cards = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id, masterycolor: this.convertMastery(doc.data().masterycolor) }));
                             onData(cards);
                         }, err => console.error("Firebase Error:", err));
                     } else {
@@ -148,47 +141,30 @@
                     }
                 });
             },
-            convertMastery(value) {
-                return Config.VALUE_TO_COLOR_MAP[value] || (Config.MASTERY_LEVELS[value] ? value : 'gray');
-            },
-            updateMastery(cardId, color) {
-                return updateDoc(doc(this.db, 'flashcards', cardId), { masterycolor: color });
-            },
-            addCard(cardData) {
-                return addDoc(collection(this.db, 'flashcards'), { ...cardData, userId: State.authUser.uid, createdAt: serverTimestamp() });
-            },
-            updateCard(cardId, cardData) {
-                return updateDoc(doc(this.db, 'flashcards', cardId), cardData);
-            },
-            deleteCard(cardId) {
-                return deleteDoc(doc(this.db, 'flashcards', cardId));
-            }
+            convertMastery: (value) => Config.VALUE_TO_COLOR_MAP[value] || (Config.MASTERY_LEVELS[value] ? value : 'gray'),
+            updateMastery: (id, color) => updateDoc(doc(FirebaseService.db, 'flashcards', id), { masterycolor: color }),
+            addCard: (data) => addDoc(collection(FirebaseService.db, 'flashcards'), { ...data, userId: State.authUser.uid, createdAt: serverTimestamp() }),
+            updateCard: (id, data) => updateDoc(doc(FirebaseService.db, 'flashcards', id), data),
+            deleteCard: (id) => deleteDoc(doc(FirebaseService.db, 'flashcards', id)),
         };
 
-        // --- UI MANAGER ---
         const UI = {
             populate() {
                 Object.assign(DOM, {
-                    homeScreen: document.getElementById('home-screen'),
-                    studyScreen: document.getElementById('study-screen'),
-                    loading: document.getElementById('loading'),
-                    folderView: document.getElementById('folder-view'),
-                    folderViewMessage: document.getElementById('folder-view-message'),
-                    filterControls: document.getElementById('filter-controls'),
-                    searchInput: document.getElementById('search-input'),
-                    clearFiltersButton: document.getElementById('clear-filters-button'),
-                    addCardButton: document.getElementById('add-card-button'),
-                    shuffleToggle: document.getElementById('shuffle-toggle'),
-                    newCardModal: document.getElementById('new-card-modal'),
-                    editCardModal: document.getElementById('edit-card-modal'),
+                    homeScreen: document.getElementById('home-screen'), studyScreen: document.getElementById('study-screen'),
+                    loading: document.getElementById('loading'), folderView: document.getElementById('folder-view'),
+                    folderViewMessage: document.getElementById('folder-view-message'), filterControls: document.getElementById('filter-controls'),
+                    searchInput: document.getElementById('search-input'), clearFiltersButton: document.getElementById('clear-filters-button'),
+                    addCardButton: document.getElementById('add-card-button'), shuffleToggle: document.getElementById('shuffle-toggle'),
+                    newCardModal: document.getElementById('new-card-modal'), editCardModal: document.getElementById('edit-card-modal'),
                     deleteConfirmModal: document.getElementById('delete-confirm-modal'),
+                    reviewFilteredButton: document.getElementById('review-filtered-button'),
+                    reviewFilteredText: document.getElementById('review-filtered-text'),
                 });
-
-                const cardFormHTML = (idPrefix, title) => `<div class="bg-slate-800 p-6 rounded-xl shadow-2xl w-full max-w-lg mx-4 border border-slate-700"><div class="flex justify-between items-center mb-4"><h3 class="text-lg font-bold text-slate-200">${title}</h3><button data-close-modal class="text-slate-500 hover:text-slate-200 text-2xl leading-none">&times;</button></div><form id="${idPrefix}-card-form" class="space-y-4"><div><label for="${idPrefix}-card-question" class="block text-sm font-medium text-slate-400">Frente (Pergunta)</label><textarea id="${idPrefix}-card-question" required rows="4" class="mt-1 w-full p-2 bg-slate-700 border border-slate-600 rounded-md"></textarea></div><div><label for="${idPrefix}-card-answer" class="block text-sm font-medium text-slate-400">Verso (Resposta)</label><textarea id="${idPrefix}-card-answer" required rows="4" class="mt-1 w-full p-2 bg-slate-700 border border-slate-600 rounded-md"></textarea></div><div class="flex space-x-4"><div class="flex-1"><label for="${idPrefix}-card-specialty" class="block text-sm font-medium text-slate-400">Especialidade</label><input type="text" id="${idPrefix}-card-specialty" required class="mt-1 w-full p-2 bg-slate-700 border border-slate-600 rounded-md"></div><div class="flex-1"><label for="${idPrefix}-card-tags" class="block text-sm font-medium text-slate-400">Tags</label><input type="text" id="${idPrefix}-card-tags" class="mt-1 w-full p-2 bg-slate-700 border border-slate-600 rounded-md"></div></div><div class="pt-2"><button type="submit" class="w-full py-2 px-4 bg-indigo-600 text-white font-bold rounded-lg shadow-md hover:bg-indigo-700">${idPrefix === 'new' ? 'Adicionar' : 'Salvar'}</button></div><p id="${idPrefix}-card-message" class="text-center mt-2 text-sm hidden"></p></form></div>`;
+                const cardFormHTML = (p, t) => `<div class="bg-slate-800 p-6 rounded-xl shadow-2xl w-full max-w-lg mx-4 border border-slate-700"><div class="flex justify-between items-center mb-4"><h3 class="text-lg font-bold text-slate-200">${t}</h3><button data-close-modal class="text-slate-500 hover:text-slate-200 text-2xl leading-none">&times;</button></div><form id="${p}-card-form" class="space-y-4"><div><label for="${p}-card-question" class="block text-sm font-medium text-slate-400">Frente</label><textarea id="${p}-card-question" required rows="4" class="mt-1 w-full p-2 bg-slate-700 border border-slate-600 rounded-md"></textarea></div><div><label for="${p}-card-answer" class="block text-sm font-medium text-slate-400">Verso</label><textarea id="${p}-card-answer" required rows="4" class="mt-1 w-full p-2 bg-slate-700 border border-slate-600 rounded-md"></textarea></div><div class="flex space-x-4"><div class="flex-1"><label for="${p}-card-specialty" class="block text-sm font-medium text-slate-400">Especialidade</label><input type="text" id="${p}-card-specialty" required class="mt-1 w-full p-2 bg-slate-700 border border-slate-600 rounded-md"></div><div class="flex-1"><label for="${p}-card-tags" class="block text-sm font-medium text-slate-400">Tags</label><input type="text" id="${p}-card-tags" class="mt-1 w-full p-2 bg-slate-700 border border-slate-600 rounded-md"></div></div><div class="pt-2"><button type="submit" class="w-full py-2 px-4 bg-indigo-600 text-white font-bold rounded-lg shadow-md hover:bg-indigo-700">${p==='new'?'Adicionar':'Salvar'}</button></div><p id="${p}-card-message" class="text-center mt-2 text-sm hidden"></p></form></div>`;
                 DOM.newCardModal.innerHTML = cardFormHTML('new', 'Criar Novo Flashcard');
                 DOM.editCardModal.innerHTML = cardFormHTML('edit', 'Editar Flashcard');
                 DOM.deleteConfirmModal.innerHTML = `<div class="bg-slate-800 p-6 rounded-xl shadow-2xl w-full max-w-sm mx-4 border border-slate-700"><h3 class="text-lg font-bold text-slate-200 mb-2">Confirmar Exclusão</h3><p class="text-slate-400 mb-6">Tem certeza? Esta ação não pode ser desfeita.</p><div class="flex justify-end space-x-4"><button id="cancel-delete-button" class="py-2 px-4 bg-slate-700 text-slate-200 font-bold rounded-lg hover:bg-slate-600">Cancelar</button><button id="confirm-delete-button" class="py-2 px-4 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700">Excluir</button></div></div>`;
-                
                 DOM.studyScreen.innerHTML = `<div class="flex justify-between items-center w-full mb-4"><button id="back-to-home-button" class="text-sm font-semibold text-slate-400 hover:text-indigo-400">← Voltar</button><div id="study-title" class="text-center text-indigo-400 font-extrabold text-lg"></div><div class="flex items-center space-x-2 text-slate-400"><button id="edit-card-button" title="Editar Card" class="p-2 rounded-full hover:bg-slate-700 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zM13.75 3.5l-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/><path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5v11z"/></svg></button><button id="delete-card-button" title="Excluir Card" class="p-2 rounded-full hover:bg-slate-700 transition-colors text-red-400"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5zM4.5 5.029L5 13.5a.5.5 0 1 0 .998-.06L5 5.029a.5.5 0 1 0-.998.06zm6.53-.528a.5.5 0 0 0-.528.47l-.5 8.5a.5.5 0 0 0 .998.058l.5-8.5a.5.5 0 0 0-.47-.528zM8 4.5a.5.5 0 0 0-.5.5v8.5a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5z"/></svg></button></div></div><div id="card-counter" class="text-center text-slate-400 font-semibold mb-4"></div><div class="card-container w-full h-96 mb-6"><div id="flashcard" class="flashcard relative w-full h-full cursor-pointer"><div id="card-front" class="card-face absolute w-full h-full flex items-center justify-center p-8 rounded-2xl shadow-xl transition-colors duration-300 bg-slate-800 border border-slate-700"><div class="markdown-content text-2xl md:text-3xl font-semibold text-center text-slate-200"></div></div><div id="card-back" class="card-face card-back absolute w-full h-full flex items-center justify-center p-8 rounded-2xl shadow-xl transition-colors duration-300 bg-indigo-600 text-white"><div class="markdown-content text-xl md:text-2xl text-center text-white"></div></div></div></div><div class="flex justify-center items-center space-x-4"><button id="prev-button" class="w-16 h-16 flex items-center justify-center bg-slate-800/80 rounded-full text-slate-400 hover:bg-slate-700/80 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M12 8a.5.5 0 0 1-.5.5H5.707l2.147 2.146a.5.5 0 0 1-.708.708l-3-3a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L5.707 7.5H11.5a.5.5 0 0 1 .5.5z"/></svg></button><div id="mastery-popover-container" class="relative"><button id="mastery-popover-button" class="flex items-center justify-center space-x-2 min-w-[150px] text-center py-3 px-6 bg-slate-700/80 text-white font-semibold rounded-full hover:bg-slate-700 transition-colors"><span id="mastery-color-indicator" class="w-4 h-4 rounded-full"></span><span id="mastery-text-indicator"></span></button><div id="mastery-popover" class="popover absolute bottom-full mb-2 w-full bg-slate-800 border border-slate-700 rounded-xl p-2 space-y-1 shadow-lg hidden opacity-0 scale-95"></div></div><button id="next-button" class="w-16 h-16 flex items-center justify-center bg-slate-800/80 rounded-full text-slate-400 hover:bg-slate-700/80 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M4 8a.5.5 0 0 1 .5-.5h5.793l-2.147-2.146a.5.5 0 0 1 .708-.708l3 3a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708-.708L10.293 8.5H4.5A.5.5 0 0 1 4 8z"/></svg></button></div>`;
 
                 Object.assign(DOM, {
@@ -215,37 +191,51 @@
                 DOM.studyScreen.classList.toggle('hidden', screen === 'home');
             },
             renderFilterControls() {
-                if (State.allCards.length === 0) {
-                    DOM.filterControls.innerHTML = '<p class="text-sm text-slate-500">Nenhum card para filtrar.</p>';
-                    return;
-                }
+                const createSection = (title, items, type) => {
+                    if (items.length === 0) return '';
+                    const itemsHtml = items.map(item => {
+                        const color = Config.MASTERY_LEVELS[item];
+                        const label = color ? color.name : item;
+                        const colorDot = color ? `<span class="w-3 h-3 rounded-full" style="background-color: ${color.hex}"></span>` : '';
+                        return `<label class="flex items-center space-x-2 text-sm text-slate-300 hover:bg-slate-700 p-1 rounded-md cursor-pointer">${colorDot}<input type="checkbox" data-type="${type}" value="${item}" class="sr-only peer"><div class="w-4 h-4 bg-slate-600 rounded border border-slate-500 peer-checked:bg-indigo-500 peer-checked:border-indigo-500 flex items-center justify-center shrink-0"><svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-white hidden peer-checked:block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg></div><span>${label}</span></label>`
+                    }).join('');
+                    return `<details class="mb-4" open><summary class="font-bold text-slate-300 cursor-pointer">${title}</summary><div class="mt-2 space-y-1">${itemsHtml}</div></details>`;
+                };
+                
                 const specialties = [...new Set(State.allCards.map(c => c.specialty || 'Geral'))].sort();
                 const tags = [...new Set(State.allCards.flatMap(c => (c.tags || '').split(',').map(t => t.trim()).filter(Boolean)))].sort();
 
-                const createSection = (title, items, type) => {
-                    if(items.length === 0) return '';
-                    const itemsHtml = items.map(item => `<label class="flex items-center space-x-2 text-sm text-slate-300 hover:bg-slate-700 p-1 rounded-md cursor-pointer"><input type="checkbox" data-type="${type}" value="${item}" class="rounded text-indigo-500 focus:ring-indigo-500 bg-slate-600 border-slate-500"><span>${item}</span></label>`).join('');
-                    return `<details class="mb-4" open><summary class="font-bold text-slate-300 cursor-pointer">${title}</summary><div class="mt-2 space-y-1">${itemsHtml}</div></details>`;
-                };
-                DOM.filterControls.innerHTML = createSection('Especialidades', specialties, 'specialties') + createSection('Tags', tags, 'tags');
+                DOM.filterControls.innerHTML = createSection('Especialidades', specialties, 'specialties') +
+                                             createSection('Tags', tags, 'tags') +
+                                             createSection('Cores', Config.COLOR_ORDER, 'colors');
             },
             renderHomeScreen() {
                 DOM.folderView.innerHTML = '';
                 const filters = {
                     specialties: [...DOM.filterControls.querySelectorAll('input[data-type="specialties"]:checked')].map(i => i.value),
                     tags: [...DOM.filterControls.querySelectorAll('input[data-type="tags"]:checked')].map(i => i.value),
+                    colors: [...DOM.filterControls.querySelectorAll('input[data-type="colors"]:checked')].map(i => i.value),
                     search: DOM.searchInput.value.toLowerCase()
                 };
 
-                const filteredCards = State.allCards.filter(card => {
+                State.filteredCards = State.allCards.filter(card => {
                     const specMatch = filters.specialties.length === 0 || filters.specialties.includes(card.specialty || 'Geral');
                     const cardTags = (card.tags || '').split(',').map(t => t.trim());
                     const tagMatch = filters.tags.length === 0 || filters.tags.some(t => cardTags.includes(t));
+                    const colorMatch = filters.colors.length === 0 || filters.colors.includes(card.masterycolor);
                     const searchMatch = filters.search === '' || (card.question || '').toLowerCase().includes(filters.search) || (card.answer || '').toLowerCase().includes(filters.search);
-                    return specMatch && tagMatch && searchMatch;
+                    return specMatch && tagMatch && colorMatch && searchMatch;
                 });
                 
-                const folders = filteredCards.reduce((acc, card) => {
+                const hasActiveFilters = filters.specialties.length > 0 || filters.tags.length > 0 || filters.colors.length > 0 || filters.search !== '';
+                if (State.filteredCards.length > 0 && hasActiveFilters) {
+                    DOM.reviewFilteredButton.classList.remove('hidden');
+                    DOM.reviewFilteredText.textContent = `Revisar ${State.filteredCards.length} Cards`;
+                } else {
+                    DOM.reviewFilteredButton.classList.add('hidden');
+                }
+
+                const folders = State.filteredCards.reduce((acc, card) => {
                     const key = card.specialty || 'Geral';
                     if (!acc[key]) acc[key] = [];
                     acc[key].push(card);
@@ -280,7 +270,7 @@
             },
             renderStudyCard() {
                  if (State.currentDeckCards.length === 0) { this.switchScreen('home'); return; }
-                 if (State.currentCardIndex >= State.currentDeckCards.length) { State.currentCardIndex = 0; }
+                 if (State.currentCardIndex >= State.currentDeckCards.length) State.currentCardIndex = 0;
                  const card = State.currentDeckCards[State.currentCardIndex];
                  DOM.frontText.innerHTML = marked.parse(card.question || '');
                  DOM.backText.innerHTML = marked.parse(card.answer || '');
@@ -322,12 +312,9 @@
             },
         };
 
-        // --- CORE LOGIC / EVENT HANDLERS ---
         function startStudySession(title, cards) {
             let deck = [...cards];
-            if(DOM.shuffleToggle.checked) {
-                deck.sort(() => Math.random() - 0.5);
-            }
+            if(DOM.shuffleToggle.checked) deck.sort(() => Math.random() - 0.5);
             State.currentDeckCards = deck;
             State.currentCardIndex = 0;
             State.isFlipped = false;
@@ -339,42 +326,21 @@
         async function handleNewCardSubmit(e) {
             e.preventDefault();
             const form = DOM.newCardForm;
-            const cardData = {
-                question: form.querySelector('#new-card-question').value.trim(),
-                answer: form.querySelector('#new-card-answer').value.trim(),
-                specialty: form.querySelector('#new-card-specialty').value.trim() || 'Geral',
-                tags: form.querySelector('#new-card-tags').value.trim(),
-                masterycolor: 'gray'
-            };
+            const cardData = { question: form.querySelector('#new-card-question').value.trim(), answer: form.querySelector('#new-card-answer').value.trim(), specialty: form.querySelector('#new-card-specialty').value.trim() || 'Geral', tags: form.querySelector('#new-card-tags').value.trim(), masterycolor: 'gray' };
             if(!cardData.question || !cardData.answer) return;
-            try {
-                await FirebaseService.addCard(cardData);
-                UI.showModalMessage('new', 'Card salvo!');
-                form.reset();
-            } catch(error) { UI.showModalMessage('new', 'Erro ao salvar.', true); }
+            try { await FirebaseService.addCard(cardData); UI.showModalMessage('new', 'Card salvo!'); form.reset(); } catch(error) { UI.showModalMessage('new', 'Erro ao salvar.', true); }
         }
 
         async function handleEditCardSubmit(e) {
             e.preventDefault();
-            const card = State.currentDeckCards[State.currentCardIndex];
-            if(!card) return;
+            const card = State.currentDeckCards[State.currentCardIndex]; if(!card) return;
             const form = DOM.editCardForm;
-            const cardData = {
-                question: form.querySelector('#edit-card-question').value.trim(),
-                answer: form.querySelector('#edit-card-answer').value.trim(),
-                specialty: form.querySelector('#edit-card-specialty').value.trim() || 'Geral',
-                tags: form.querySelector('#edit-card-tags').value.trim(),
-            };
-            try {
-                await FirebaseService.updateCard(card.id, cardData);
-                UI.showModalMessage('edit', 'Card atualizado!');
-                setTimeout(() => DOM.editCardModal.classList.add('hidden'), 1000);
-            } catch(error) { UI.showModalMessage('edit', 'Erro ao atualizar.', true); }
+            const cardData = { question: form.querySelector('#edit-card-question').value.trim(), answer: form.querySelector('#edit-card-answer').value.trim(), specialty: form.querySelector('#edit-card-specialty').value.trim() || 'Geral', tags: form.querySelector('#edit-card-tags').value.trim() };
+            try { await FirebaseService.updateCard(card.id, cardData); UI.showModalMessage('edit', 'Card atualizado!'); setTimeout(() => DOM.editCardModal.classList.add('hidden'), 1000); } catch(error) { UI.showModalMessage('edit', 'Erro ao atualizar.', true); }
         }
 
         async function handleDeleteCard() {
-            const card = State.currentDeckCards[State.currentCardIndex];
-            if(!card) return;
+            const card = State.currentDeckCards[State.currentCardIndex]; if(!card) return;
             try {
                 await FirebaseService.deleteCard(card.id);
                 State.currentDeckCards.splice(State.currentCardIndex, 1);
@@ -390,7 +356,12 @@
 
                 if (target.closest('#add-card-button')) DOM.newCardModal.classList.remove('hidden');
                 if (target.closest('#clear-filters-button')) { DOM.searchInput.value = ''; DOM.filterControls.querySelectorAll('input').forEach(i => i.checked = false); UI.renderHomeScreen(); }
-                if (target.dataset.closeModal || (modal && target === modal)) (modal || target.closest('.z-50')).classList.add('hidden');
+                
+                // Corrigido: Lógica de fechamento do modal
+                if (target.hasAttribute('data-close-modal') || (modal && target === modal)) {
+                    (modal || target.closest('.z-50')).classList.add('hidden');
+                }
+                
                 if (target.id === 'cancel-delete-button') DOM.deleteConfirmModal.classList.add('hidden');
                 if (target.id === 'confirm-delete-button') handleDeleteCard();
                 if (target.closest('#edit-card-button')) showEditModal();
@@ -399,20 +370,15 @@
                 if (target.closest('#flashcard')) { State.isFlipped = !State.isFlipped; DOM.flashcard.classList.toggle('is-flipped'); }
                 if (target.closest('#next-button')) { State.currentCardIndex = (State.currentCardIndex + 1) % State.currentDeckCards.length; UI.renderStudyCard(); }
                 if (target.closest('#prev-button')) { State.currentCardIndex = (State.currentCardIndex - 1 + State.currentDeckCards.length) % State.currentDeckCards.length; UI.renderStudyCard(); }
+                if (target.closest('#review-filtered-button')) startStudySession('Revisão Filtrada', State.filteredCards);
                 
                 if (target.closest('#mastery-popover-button')) { e.stopPropagation(); UI.toggleMasteryPopover(); }
                 else if (!target.closest('#mastery-popover-container')) UI.toggleMasteryPopover(false);
 
                 const masteryBtn = target.closest('.mastery-btn');
                 if(masteryBtn) {
-                    const color = masteryBtn.dataset.color;
-                    const card = State.currentDeckCards[State.currentCardIndex];
-                    if (card) {
-                        card.masterycolor = color;
-                        FirebaseService.updateMastery(card.id, color);
-                        UI.updateCardAppearance();
-                        UI.toggleMasteryPopover(false);
-                    }
+                    const color = masteryBtn.dataset.color; const card = State.currentDeckCards[State.currentCardIndex];
+                    if (card) { card.masterycolor = color; FirebaseService.updateMastery(card.id, color); UI.updateCardAppearance(); UI.toggleMasteryPopover(false); }
                 }
             });
 
@@ -423,8 +389,7 @@
         }
         
         function showEditModal() {
-            const card = State.currentDeckCards[State.currentCardIndex];
-            if(!card) return;
+            const card = State.currentDeckCards[State.currentCardIndex]; if(!card) return;
             const form = DOM.editCardForm;
             form.querySelector('#edit-card-question').value = card.question;
             form.querySelector('#edit-card-answer').value = card.answer;
@@ -433,7 +398,6 @@
             DOM.editCardModal.classList.remove('hidden');
         }
 
-        // --- INITIALIZATION ---
         window.onload = () => {
             UI.populate();
             UI.renderMasteryPopover();
@@ -449,4 +413,5 @@
     </script>
 </body>
 </html>
+
 
