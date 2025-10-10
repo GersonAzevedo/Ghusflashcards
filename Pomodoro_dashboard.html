@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Performance - Pomodoro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        html, body { height: 100%; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(-45deg, #111827, #1e1b4b, #312e81, #1e293b);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+        }
+        @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        /* Estilos para o Heatmap */
+        .grid-heatmap {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(16px, 1fr));
+            grid-auto-flow: column;
+            gap: 4px;
+            max-width: 100%;
+            overflow-x: auto;
+            padding-bottom: 8px; /* Espaço para o scrollbar */
+        }
+        .heat-cell {
+            width: 16px; 
+            height: 16px; 
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="text-slate-200">
+
+    <div id="loading-screen" class="flex items-center justify-center h-full">
+        <div class="animate-spin inline-block w-8 h-8 border-4 border-t-4 border-indigo-500 border-opacity-25 rounded-full"></div>
+    </div>
+
+    <div id="main-content" class="w-full max-w-7xl mx-auto p-4 md:p-6 hidden">
+        <div class="w-full bg-slate-900/70 backdrop-blur-xl border border-slate-700/50 rounded-3xl shadow-2xl shadow-black/30 p-6 md:p-8" style="animation: fadeIn 0.5s ease forwards;">
+            <header class="flex justify-between items-center mb-8">
+                <h1 class="text-3xl md:text-4xl font-extrabold text-white">Dashboard de Foco</h1>
+                <!-- Mantendo a funcionalidade de voltar/recarregar -->
+                <button onclick="window.location.reload()" class="group flex items-center space-x-2 text-sm font-semibold text-slate-400 hover:text-indigo-400 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M12 8a.5.5 0 0 1-.5.5H5.707l2.147 2.146a.5.5 0 0 1-.708.708l-3-3a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L5.707 7.5H11.5a.5.5 0 0 1 .5.5z"/></svg>
+                    <span>Voltar</span>
+                </button>
+            </header>
+
+            <div id="dashboard-content" class="space-y-8">
+                <!-- KPIs -->
+                <div id="kpi-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+                
+                <!-- Calendário de Atividade -->
+                <div>
+                    <h2 class="text-2xl font-bold text-white mb-4">Calendário de Atividade (Últimos 366 Dias)</h2>
+                    <div id="heatmap-container" class="bg-slate-800/80 p-4 rounded-xl border border-slate-700/50">
+                        <!-- O conteúdo do heatmap será renderizado aqui -->
+                    </div>
+                </div>
+
+                <!-- Gráficos -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div>
+                        <h2 class="text-2xl font-bold text-white mb-4">Tempo por Matéria</h2>
+                        <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700/50">
+                            <canvas id="tags-chart"></canvas>
+                        </div>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-white mb-4">Sessões Recentes</h2>
+                        <div id="recent-sessions-log" class="space-y-2"></div>
+                    </div>
+                </div>
+
+                <!-- Conquistas -->
+                <div>
+                    <h2 class="text-2xl font-bold text-white mb-4">Conquistas</h2>
+                    <div id="achievements-container" class="flex flex-wrap gap-4"></div>
+                </div>
+            </div>
+            <div id="empty-state" class="hidden text-center py-16 px-6">
+                 <h3 class="mt-4 text-xl font-semibold text-white">Nenhuma Sessão de Foco Encontrada</h3>
+                 <p class="mt-2 text-slate-400">Comece a usar o timer Pomodoro para ver suas estatísticas aqui.</p>
+             </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- CONFIGURAÇÃO DO AMBIENTE (OBRIGATÓRIO) ---
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        let db;
+        let userId = null;
+
+        // Função de inicialização e autenticação
+        async function initializeAppAndAuth() {
+            try {
+                const app = initializeApp(firebaseConfig);
+                const auth = getAuth(app);
+                db = getFirestore(app);
+
+                // Tenta autenticar com o token personalizado, fallback para anônimo
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken).catch(async (e) => {
+                        console.warn("Custom token failed, signing in anonymously:", e);
+                        await signInAnonymously(auth);
+                    });
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                // Listener para o estado de autenticação
+                onAuthStateChanged(auth, user => {
+                    if (user) {
+                        userId = user.uid;
+                        document.getElementById('loading-screen').style.display = 'none';
+                        document.getElementById('main-content').style.display = 'block';
+                        loadDashboardData();
+                    } else {
+                        // Não há redirecionamento, apenas loga. O Canvas deve gerenciar a ausência de autenticação.
+                        console.log("Usuário deslogado. Dashboard precisa de autenticação para carregar dados.");
+                    }
+                });
+
+            } catch (error) {
+                console.error("Falha na inicialização do Firebase:", error);
+                document.getElementById('loading-screen').innerHTML = `<p class="text-red-400">Falha na inicialização. Verifique a configuração.</p>`;
+            }
+        }
+
+        function getCollectionPath() {
+             if (!userId) return null;
+             // Usa o caminho de coleção privado para os dados do Pomodoro
+             return `artifacts/${appId}/users/${userId}/pomodoroSessions`; 
+        }
+
+        function loadDashboardData() {
+            const collectionPath = getCollectionPath();
+            if (!collectionPath) {
+                console.error("Caminho da coleção não definido. Usuário não autenticado.");
+                return;
+            }
+
+            // A query não usa orderBy para evitar problemas de índice.
+            const sessionsQuery = query(collection(db, collectionPath));
+
+            onSnapshot(sessionsQuery, snapshot => {
+                const sessions = snapshot.docs.map(doc => {
+                    const data = doc.data();
+                    // Garante que createdAt é um objeto Date
+                    return { ...data, createdAt: data.createdAt?.toDate() };
+                });
+
+                // ORDENAÇÃO LOCAL: Ordena as sessões por data de criação (mais recente primeiro)
+                sessions.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+                if (sessions.length === 0) {
+                    document.getElementById('dashboard-content').classList.add('hidden');
+                    document.getElementById('empty-state').classList.remove('hidden');
+                    return;
+                }
+                
+                document.getElementById('dashboard-content').classList.remove('hidden');
+                document.getElementById('empty-state').classList.add('hidden');
+
+                renderKPIs(sessions);
+                renderHeatmap(sessions);
+                renderTagsChart(sessions);
+                renderRecentSessions(sessions.slice(0, 5));
+                renderAchievements(sessions);
+            }, (error) => {
+                console.error("Erro ao carregar dados do Dashboard:", error);
+                // Tratar erro no console, mas não travar a UI
+            });
+        }
+
+        function formatTime(minutes) {
+            if (minutes < 60) return `${Math.round(minutes)} min`;
+            const hours = Math.floor(minutes / 60);
+            const remainingMinutes = Math.round(minutes % 60);
+            return `${hours}h ${remainingMinutes}m`;
+        }
+
+        function renderKPIs(sessions) {
+            const today = new Date().toDateString();
+            const pomodorosToday = sessions.filter(s => s.createdAt && s.createdAt.toDateString() === today).length;
+            
+            const totalTime = sessions.reduce((sum, s) => sum + (s.duracao || 0), 0);
+
+            // Calcula a sequência de dias
+            const uniqueDays = new Set(sessions.map(s => s.createdAt?.toDateString()).filter(Boolean));
+            let streak = 0;
+            let currentDate = new Date();
+            currentDate.setHours(0, 0, 0, 0); // Zera hora para comparação de dia
+
+            // 1. Verifica o dia de hoje
+            if (uniqueDays.has(currentDate.toDateString())) {
+                 streak++;
+            }
+            // 2. Verifica dias anteriores
+            currentDate.setDate(currentDate.getDate() - 1);
+            while (uniqueDays.has(currentDate.toDateString())) {
+                streak++;
+                currentDate.setDate(currentDate.getDate() - 1);
+            }
+
+            const kpis = [
+                { label: 'Tempo Total Focado', value: formatTime(totalTime) },
+                { label: 'Sequência de Dias', value: `${streak} dia(s)` },
+                { label: 'Sessões Hoje', value: pomodorosToday }
+            ];
+            document.getElementById('kpi-container').innerHTML = kpis.map(k => `
+                <div class="bg-slate-800/80 p-5 rounded-xl border border-slate-700/50">
+                    <p class="text-sm text-slate-400">${k.label}</p>
+                    <p class="text-3xl font-bold text-white">${k.value}</p>
+                </div>`).join('');
+        }
+
+        function renderHeatmap(sessions) {
+            const container = document.getElementById('heatmap-container');
+            const contributions = sessions.reduce((acc, session) => {
+                if (session.createdAt) {
+                    // Usa a data ISO (YYYY-MM-DD) para chave
+                    const date = session.createdAt.toISOString().split('T')[0];
+                    acc[date] = (acc[date] || 0) + (session.duracao || 0);
+                }
+                return acc;
+            }, {});
+
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setDate(endDate.getDate() - 365); // Últimos 366 dias (incluindo hoje)
+            
+            let calendarHTML = '<div class="grid-heatmap">';
+            let currentDate = new Date(startDate);
+            
+            // Renderiza 366 dias (365 dias atrás + hoje)
+            let daysRendered = 0;
+            while (daysRendered <= 365) {
+                const dateString = currentDate.toISOString().split('T')[0];
+                const count = contributions[dateString] || 0;
+                let colorClass = 'bg-slate-700';
+                
+                // Níveis de calor baseados na duração em minutos
+                if (count > 0) colorClass = 'bg-green-800';
+                if (count >= 30) colorClass = 'bg-green-700';
+                if (count >= 60) colorClass = 'bg-green-600';
+                if (count >= 120) colorClass = 'bg-green-400';
+                
+                calendarHTML += `<div class="heat-cell ${colorClass}" title="${currentDate.toLocaleDateString('pt-BR')}: ${Math.round(count)} min"></div>`;
+                currentDate.setDate(currentDate.getDate() + 1);
+                daysRendered++;
+            }
+            calendarHTML += '</div>';
+            container.innerHTML = calendarHTML;
+        }
+
+        let tagsChartInstance = null;
+        function renderTagsChart(sessions) {
+            const ctx = document.getElementById('tags-chart').getContext('2d');
+            const tagsData = sessions.reduce((acc, session) => {
+                // Acessa a tag de estudo
+                if (session.tagEstudo) {
+                    acc[session.tagEstudo] = (acc[session.tagEstudo] || 0) + (session.duracao || 0);
+                }
+                return acc;
+            }, {});
+
+            const sortedTags = Object.entries(tagsData).sort((a, b) => b[1] - a[1]).slice(0, 7);
+            
+            const labels = sortedTags.map(entry => entry[0]);
+            const data = sortedTags.map(entry => entry[1]);
+
+            if (tagsChartInstance) {
+                tagsChartInstance.destroy();
+            }
+
+            tagsChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Minutos Focados',
+                        data: data,
+                        backgroundColor: 'rgba(79, 70, 229, 0.5)',
+                        borderColor: 'rgba(79, 70, 229, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    indexAxis: 'y',
+                    // Configurações de tema escuro para Chart.js
+                    scales: {
+                        x: { 
+                            ticks: { color: '#94a3b8' }, 
+                            grid: { color: '#334155' } 
+                        },
+                        y: { 
+                            ticks: { color: '#94a3b8' }, 
+                            grid: { color: '#334155' } 
+                        }
+                    },
+                    plugins: { 
+                        legend: { display: false } 
+                    }
+                }
+            });
+        }
+        
+        function renderRecentSessions(sessions) {
+            const logEl = document.getElementById('recent-sessions-log');
+            if (sessions.length > 0) {
+                logEl.innerHTML = sessions.map(data => {
+                    const date = data.createdAt ? data.createdAt.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) : '...';
+                    return `<div class="bg-slate-800/50 p-3 rounded-lg text-sm flex justify-between items-center"><p class="text-slate-300">Sessão de <span class="font-semibold text-indigo-400">${data.tagEstudo || 'N/A'}</span></p><p class="text-slate-400">${date} - ${Math.round(data.duracao) || 0} min</p></div>`
+                }).join('');
+            } else {
+                logEl.innerHTML = `<p class="text-sm text-slate-500">Nenhuma sessão de estudo registrada ainda.</p>`;
+            }
+        }
+        
+        function renderAchievements(sessions) {
+            const container = document.getElementById('achievements-container');
+            const totalTime = sessions.reduce((sum, s) => sum + (s.duracao || 0), 0);
+            const achievements = [];
+            
+            if (sessions.length >= 1) achievements.push({ title: 'Primeiro Foco', desc: 'Completou sua primeira sessão.' });
+            if (sessions.length >= 10) achievements.push({ title: 'Estudante Dedicado', desc: 'Completou 10 sessões.' });
+            // 10 horas = 600 minutos
+            if (totalTime >= 600) achievements.push({ title: 'Maratonista', desc: 'Acumulou 10 horas de estudo.' });
+            // 25 horas = 1500 minutos
+            if (totalTime >= 1500) achievements.push({ title: 'Super Foco', desc: 'Acumulou 25 horas de estudo.' });
+
+
+            container.innerHTML = achievements.map(ach => `
+                <div class="bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 p-3 rounded-lg flex items-center space-x-3" title="${ach.desc}">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M8.736.54c.18-.32.54-.424.86-.317l.157.052c.11.035.218.08.324.138.106.058.21.127.31.206l.1.08c.11.086.21.183.303.29.094.106.18.218.258.337l.078.118c.07.106.13.218.183.335a.87.87 0 0 1 .122.383l.03.149c.045.22.014.45-.084.654l-.118.22a1.003 1.003 0 0 0 .19.982l.142.143a.87.87 0 0 1 .5.707l.01.15c.01.24-.093.475-.27.65l-.176.17a.87.87 0 0 0 .093 1.258l.143.142a.87.87 0 0 1 .5.707l.01.15c.01.24-.093.475-.27.65l-.176.17a.87.87 0 0 0 .093 1.258l.143.142a.87.87 0 0 1 .5.707l.01.15c.01.24-.093.475-.27.65l-.176.17a.87.87 0 0 0 .093 1.258l.143.142a.87.87 0 0 1 .5.707l.01.15c.01.24-.093.475-.27.65l-.176.17a.87.87 0 0 0 .093 1.258l.143.142a.87.87 0 0 1 .5.707l.01.15c.01.24-.093.475-.27.65l-.176.17a.87.87 0 0 0 .093 1.258l.143.142c.418.417.418 1.1-.002 1.518l-.143.142a.87.87 0 0 1-1.258.093l-.17-.176c-.175-.177-.41-.28-.65-.27l-.15.01a.87.87 0 0 1-.707.5l-.142.143c-.418.417-1.1.417-1.518-.002l-.142-.143a.87.87 0 0 1-.093-1.258l.17-.176c.177-.175.28-.41.27-.65l-.01-.15a.87.87 0 0 1-.5-.707l-.143-.142a.87.87 0 0 0-1.258-.093l-.17.176c-.175-.177-.41.28-.65.27l-.15-.01a.87.87 0 0 1-.707-.5l-.142-.143a.87.87 0 0 0-1.258.093l-.17.176c-.175-.177-.41.28-.65.27l-.15-.01a.87.87 0 0 1-.707-.5l-.142-.143a.87.87 0 0 0-1.258.093l-.17.176c-.175-.177-.41.28-.65.27l-.15-.01a.87.87 0 0 1-.707-.5l-.142-.143c-.418-.417-.418-1.1.002-1.518l.142-.143a.87.87 0 0 1 1.258-.093l.17.176c.177-.175.41.28.65.27l.15.01a.87.87 0 0 1 .707.5l.142.143a.87.87 0 0 0 1.258-.093l.17-.176c.177-.175.28-.41.27-.65l-.01-.15a.87.87 0 0 1 .5-.707l.143-.142a.87.87 0 0 0 .093-1.258l-.17-.176c-.177-.175-.28-.41-.27-.65l.01-.15a.87.87 0 0 1 .5-.707l.143-.142a.87.87 0 0 0 .093-1.258l-.17-.176c-.177-.175-.28-.41-.27-.65l.01-.15a.87.87 0 0 1 .5-.707l.143-.142a.87.87 0 0 0 .093-1.258l-.17-.176c-.177-.175-.28-.41-.27-.65l.01-.15a.87.87 0 0 1 .5-.707l.143-.142a.87.87 0 0 0 .093-1.258l-.17-.17a.87.87 0 0 1 .082-.973l.118-.22c.098-.195.13-.425.084-.654l-.03-.149a.87.87 0 0 1-.122-.383c-.053-.117-.113-.229-.183-.335l-.078-.118c-.078-.119-.164-.23-.258-.337a1.003 1.003 0 0 0-.303-.29l-.1-.08a1.003 1.003 0 0 0-.31-.206 1.003 1.003 0 0 0-.324-.138l-.157-.052a.87.87 0 0 1-.86.317zM8 4.093c-.63.22-1.343.02-1.787-.424a.87.87 0 0 1-.212-.665c.01-.24.093-.475.27-.65l.176-.17a.87.87 0 0 1 1.258.093l.143.142c.418.417 1.1.417 1.518-.002l.142-.143a.87.87 0 0 1 1.258-.093l.176.17c.177.175.26.41.27.65a.87.87 0 0 1-.212.665c-.444.444-1.157.644-1.787.424L8.5 4.51l-.25-.132z"/></svg>
+                    <span class="font-semibold text-sm">${ach.title}</span>
+                </div>
+            `).join('');
+
+            if(achievements.length === 0) {
+                container.innerHTML = `<p class="text-sm text-slate-500">Complete sua primeira sessão de foco para desbloquear conquistas!</p>`;
+            }
+        }
+        
+        // Inicia a aplicação
+        initializeAppAndAuth();
+    </script>
+</body>
+</html>
