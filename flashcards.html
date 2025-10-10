@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flashcards de Estudo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        html, body { height: 100%; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(-45deg, #111827, #1e1b4b, #312e81, #1e293b);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+        }
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .card-container { perspective: 1000px; }
+        .flashcard { transform-style: preserve-3d; transition: transform 0.6s; }
+        .flashcard.is-flipped { transform: rotateY(180deg); }
+        .card-face { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+        .card-back { transform: rotateY(180deg); }
+        .markdown-content ul { list-style-type: disc; padding-left: 20px; margin-top: 8px; }
+        .markdown-content li { margin-bottom: 4px; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="text-slate-200">
+
+    <div id="main-container" class="w-full max-w-7xl mx-auto h-full flex flex-col p-4 md:p-6">
+        <!-- TELA INICIAL (HOME SCREEN) -->
+        <div id="home-screen" class="w-full h-full bg-slate-900/70 backdrop-blur-xl border border-slate-700/50 rounded-3xl shadow-2xl shadow-black/30 overflow-hidden grid grid-cols-1 md:grid-cols-[minmax(250px,300px)_1fr]">
+            
+            <div class="w-full border-b md:border-r border-slate-700/50 p-4 flex flex-col bg-slate-900/50">
+                <div class="space-y-3 mb-4 flex-shrink-0">
+                    <a href="stats.html" class="group w-full flex items-center justify-center space-x-2 text-center py-2.5 px-4 bg-slate-800/80 text-slate-300 font-semibold rounded-lg hover:bg-slate-700/80 hover:text-white transition-colors text-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11 2a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v12h.5a.5.5 0 0 1 0 1H.5a.5.5 0 0 1 0-1H1v-3a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3h1V7a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7h1V2z"/></svg>
+                        <span>Estatísticas</span>
+                    </a>
+                    <button id="add-card-button" class="group w-full flex items-center justify-center space-x-2 py-2.5 px-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-indigo-500/40 transform hover:scale-105 transition-all text-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM8.5 4.5a.5.5 0 0 0-1 0v3h-3a.5.5 0 0 0 0 1h3v3a.5.5 0 0 0 1 0v-3h3a.5.5 0 0 0 0-1h-3v-3z"/></svg>
+                        <span>Adicionar Card</span>
+                    </button>
+                </div>
+                
+                <div class="flex-shrink-0">
+                    <h3 class="text-lg font-bold text-indigo-400 mb-3 border-t border-slate-700/50 pt-3">Filtros</h3>
+                    <input type="text" id="search-input" placeholder="Buscar no conteúdo..." class="w-full p-2 mb-3 bg-slate-800 border border-slate-700 rounded-lg text-sm focus:ring-indigo-500 focus:border-indigo-500 placeholder-slate-500">
+                </div>
+
+                <div id="filter-controls" class="flex-grow overflow-y-auto pr-2">
+                    <p class="text-sm text-slate-500">Carregando filtros...</p>
+                </div>
+                 <div class="flex-shrink-0 pt-2 border-t border-slate-700/50">
+                    <button id="clear-filters-button" class="w-full text-center text-sm text-indigo-400 font-semibold hover:underline">Limpar Filtros</button>
+                </div>
+            </div>
+            
+            <div id="home-content" class="flex-grow p-6 md:p-8 overflow-y-auto">
+                <h1 class="text-4xl font-extrabold text-white mb-6">Revisão Ativa</h1>
+                
+                <div id="loading" class="text-center p-8">
+                    <div class="animate-spin inline-block w-6 h-6 border-4 border-t-4 border-indigo-500 border-opacity-25 rounded-full mr-2"></div>
+                    <p class="text-lg font-medium text-slate-400">Carregando flashcards...</p>
+                </div>
+
+                <p id="folder-view-message" class="text-slate-400 mb-6 hidden">Selecione filtros ao lado para começar.</p>
+                <div id="folder-view" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"></div>
+            </div>
+        </div>
+
+        <div id="study-screen" class="w-full max-w-xl mx-auto hidden">
+            <div class="flex justify-between items-center w-full mb-4">
+                <button id="back-to-home-button" class="text-sm font-semibold text-slate-400 hover:text-indigo-400">← Voltar</button>
+                <div class="flex items-center space-x-2 text-slate-400">
+                    <button id="edit-card-button" title="Editar Card" class="p-2 rounded-full hover:bg-slate-700 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zM13.75 3.5l-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/><path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5v11z"/></svg>
+                    </button>
+                    <button id="delete-card-button" title="Excluir Card" class="p-2 rounded-full hover:bg-slate-700 transition-colors text-red-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5zM4.5 5.029L5 13.5a.5.5 0 1 0 .998-.06L5 5.029a.5.5 0 1 0-.998.06zm6.53-.528a.5.5 0 0 0-.528.47l-.5 8.5a.5.5 0 0 0 .998.058l.5-8.5a.5.5 0 0 0-.47-.528zM8 4.5a.5.5 0 0 0-.5.5v8.5a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5z"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div id="study-title" class="text-center text-indigo-400 font-extrabold text-lg mb-2"></div>
+            <div id="card-counter" class="text-center text-slate-400 font-semibold mb-4"></div>
+            <div class="card-container w-full h-80 mb-6">
+                <div id="flashcard" class="flashcard relative w-full h-full cursor-pointer">
+                    <div id="card-front" class="card-face absolute w-full h-full flex items-center justify-center p-8 rounded-2xl shadow-xl transition-colors duration-300 bg-slate-800 border border-slate-700">
+                        <span class="absolute top-4 left-4 text-xs font-mono text-slate-500" id="card-id-display"></span>
+                        <div class="markdown-content text-2xl md:text-3xl font-semibold text-center text-slate-200"></div>
+                    </div>
+                    <div id="card-back" class="card-face card-back absolute w-full h-full flex items-center justify-center p-8 rounded-2xl shadow-xl transition-colors duration-300 bg-indigo-600 text-white">
+                        <div class="markdown-content text-xl md:text-2xl text-center text-white"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="flex flex-col space-y-3">
+                <button id="flip-button" class="w-full py-3 px-4 bg-indigo-600 text-white font-bold rounded-xl shadow-md hover:bg-indigo-700 transition-colors">Virar Card</button>
+                <div class="flex space-x-3">
+                    <button id="prev-button" class="w-full py-3 px-4 bg-slate-700 text-slate-200 font-bold rounded-xl shadow-md hover:bg-slate-600 transition-colors border border-slate-600">Anterior</button>
+                    <button id="next-button" class="w-full py-3 px-4 bg-slate-700 text-slate-200 font-bold rounded-xl shadow-md hover:bg-slate-600 transition-colors border border-slate-600">Próximo</button>
+                </div>
+            </div>
+            <div class="mt-6 p-4 bg-slate-800/80 rounded-xl shadow-inner border border-slate-700/50">
+                <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3 text-center">Marcar Domínio</h3>
+                <div id="mastery-controls" class="flex justify-center flex-wrap gap-2"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="new-card-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center hidden z-50"></div>
+    <div id="edit-card-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center hidden z-50"></div>
+    <div id="delete-confirm-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center hidden z-50"></div>
+    
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAJ7fpCQPimWgcJuYiLbCZ5Rf5YUgMVZ2Q",
+            authDomain: "ghus-app.firebaseapp.com",
+            projectId: "ghus-app",
+            storageBucket: "ghus-app.firebasestorage.app",
+            messagingSenderId: "1047907929485",
+            appId: "1:1047907929485:web:cba05f2850df61d201c1c4",
+        };
+        
+        const MASTERY_LEVELS = {
+            'gray': { name: 'Padrão', cardBg: 'bg-slate-800', btnBg: 'bg-slate-600', ring: 'ring-slate-400', text: 'text-slate-200' },
+            'red': { name: 'Revisar', cardBg: 'bg-red-900/50', btnBg: 'bg-red-600', ring: 'ring-red-400', text: 'text-red-300' },
+            'orange': { name: 'Difícil', cardBg: 'bg-orange-900/50', btnBg: 'bg-orange-600', ring: 'ring-orange-400', text: 'text-orange-300' },
+            'yellow': { name: 'Médio', cardBg: 'bg-yellow-900/50', btnBg: 'bg-yellow-600', ring: 'ring-yellow-400', text: 'text-yellow-300' },
+            'green': { name: 'Fácil', cardBg: 'bg-green-900/50', btnBg: 'bg-green-600', ring: 'ring-green-400', text: 'text-green-300' },
+            'blue': { name: 'Dominado', cardBg: 'bg-blue-900/50', btnBg: 'bg-blue-600', ring: 'ring-blue-400', text: 'text-blue-300' }
+        };
+        const COLOR_ORDER = ['red', 'orange', 'yellow', 'green', 'blue', 'gray'];
+        const VALUE_TO_COLOR_MAP = { 0: 'gray', 1: 'red', 2: 'orange', 3: 'yellow', 4: 'green', 5: 'blue' };
+        let allCards = [], currentDeckCards = [], currentCardIndex = 0, isFlipped = false, authUser = null;
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const dom = {
+            homeScreen: document.getElementById('home-screen'), studyScreen: document.getElementById('study-screen'),
+            loading: document.getElementById('loading'), folderView: document.getElementById('folder-view'),
+            folderViewMessage: document.getElementById('folder-view-message'), filterControls: document.getElementById('filter-controls'),
+            searchInput: document.getElementById('search-input'), clearFiltersButton: document.getElementById('clear-filters-button'),
+            addCardButton: document.getElementById('add-card-button'),
+            newCardModal: document.getElementById('new-card-modal'), editCardModal: document.getElementById('edit-card-modal'),
+            deleteConfirmModal: document.getElementById('delete-confirm-modal'),
+            studyTitle: document.getElementById('study-title'), cardCounter: document.getElementById('card-counter'),
+            flashcard: document.getElementById('flashcard'), cardFront: document.getElementById('card-front'),
+            cardBack: document.getElementById('card-back'), frontText: document.querySelector('#card-front .markdown-content'),
+            backText: document.querySelector('#card-back .markdown-content'), cardIdDisplay: document.getElementById('card-id-display'),
+            flipButton: document.getElementById('flip-button'), prevButton: document.getElementById('prev-button'),
+            nextButton: document.getElementById('next-button'), masteryControls: document.getElementById('mastery-controls'),
+            backToHomeButton: document.getElementById('back-to-home-button'), editCardButton: document.getElementById('edit-card-button'),
+            deleteCardButton: document.getElementById('delete-card-button'),
+        };
+        
+        const cardFormHTML = (idPrefix, title) => `
+            <div class="bg-slate-800 p-6 rounded-xl shadow-2xl w-full max-w-lg mx-4 border border-slate-700">
+                <div class="flex justify-between items-center mb-4"><h3 class="text-lg font-bold text-slate-200">${title}</h3><button data-close-modal="${idPrefix}" class="text-slate-500 hover:text-slate-200 text-2xl leading-none">&times;</button></div>
+                <form id="${idPrefix}-card-form" class="space-y-4">
+                    <div><label for="${idPrefix}-card-question" class="block text-sm font-medium text-slate-400">Frente (Pergunta)</label><textarea id="${idPrefix}-card-question" required rows="4" class="mt-1 w-full p-2 bg-slate-700 border border-slate-600 rounded-md focus:ring-indigo-500 focus:border-indigo-500"></textarea></div>
+                    <div><label for="${idPrefix}-card-answer" class="block text-sm font-medium text-slate-400">Verso (Resposta)</label><textarea id="${idPrefix}-card-answer" required rows="4" class="mt-1 w-full p-2 bg-slate-700 border border-slate-600 rounded-md focus:ring-indigo-500 focus:border-indigo-500"></textarea></div>
+                    <div class="flex space-x-4"><div class="flex-1"><label for="${idPrefix}-card-specialty" class="block text-sm font-medium text-slate-400">Especialidade</label><input type="text" id="${idPrefix}-card-specialty" required class="mt-1 w-full p-2 bg-slate-700 border border-slate-600 rounded-md focus:ring-indigo-500 focus:border-indigo-500"></div><div class="flex-1"><label for="${idPrefix}-card-tags" class="block text-sm font-medium text-slate-400">Tags</label><input type="text" id="${idPrefix}-card-tags" class="mt-1 w-full p-2 bg-slate-700 border border-slate-600 rounded-md focus:ring-indigo-500 focus:border-indigo-500"></div></div>
+                    <div class="pt-2"><button type="submit" class="w-full py-2 px-4 bg-indigo-600 text-white font-bold rounded-lg shadow-md hover:bg-indigo-700 transition-colors">${idPrefix === 'new' ? 'Adicionar' : 'Salvar'}</button></div>
+                    <p id="${idPrefix}-card-message" class="text-center mt-2 text-sm text-green-500 hidden"></p>
+                </form>
+            </div>`;
+        dom.newCardModal.innerHTML = cardFormHTML('new', 'Criar Novo Flashcard');
+        dom.editCardModal.innerHTML = cardFormHTML('edit', 'Editar Flashcard');
+        dom.deleteConfirmModal.innerHTML = `<div class="bg-slate-800 p-6 rounded-xl shadow-2xl w-full max-w-sm mx-4 border border-slate-700"><h3 class="text-lg font-bold text-slate-200 mb-2">Confirmar Exclusão</h3><p class="text-slate-400 mb-6">Tem certeza que deseja excluir este card? Esta ação não pode ser desfeita.</p><div class="flex justify-end space-x-4"><button id="cancel-delete-button" class="py-2 px-4 bg-slate-700 text-slate-200 font-bold rounded-lg hover:bg-slate-600">Cancelar</button><button id="confirm-delete-button" class="py-2 px-4 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700">Excluir</button></div></div>`;
+        
+        dom.newCardForm = document.getElementById('new-card-form');
+        dom.editCardForm = document.getElementById('edit-card-form');
+        dom.confirmDeleteButton = document.getElementById('confirm-delete-button');
+        dom.cancelDeleteButton = document.getElementById('cancel-delete-button');
+
+        const convertMasteryValueToString = (value) => VALUE_TO_COLOR_MAP[value] || (MASTERY_LEVELS[value] ? value : 'gray');
+
+        function renderFilterControls() {
+            if (allCards.length === 0) {
+                dom.filterControls.innerHTML = '<p class="text-sm text-slate-500">Nenhum card para filtrar.</p>';
+                return;
+            }
+            const specialties = [...new Set(allCards.map(c => c.specialty || 'Geral'))].sort();
+            const tags = [...new Set(allCards.flatMap(c => (c.tags || '').split(',').map(t => t.trim()).filter(Boolean)))].sort();
+
+            const createSection = (title, items, type) => {
+                if(items.length === 0) return '';
+                const itemsHtml = items.map(item => `<label class="flex items-center space-x-2 text-sm text-slate-300 hover:bg-slate-700 p-1 rounded-md cursor-pointer"><input type="checkbox" data-type="${type}" value="${item}" class="rounded text-indigo-500 focus:ring-indigo-500 bg-slate-600 border-slate-500"><span>${item}</span></label>`).join('');
+                return `<details class="mb-4" open><summary class="font-bold text-slate-300 cursor-pointer">${title}</summary><div class="mt-2 space-y-1">${itemsHtml}</div></details>`;
+            };
+            dom.filterControls.innerHTML = createSection('Especialidades', specialties, 'specialties') + createSection('Tags', tags, 'tags');
+        }
+
+        function renderHomeScreen() {
+            dom.folderView.innerHTML = '';
+            const filters = {
+                specialties: [...dom.filterControls.querySelectorAll('input[data-type="specialties"]:checked')].map(i => i.value),
+                tags: [...dom.filterControls.querySelectorAll('input[data-type="tags"]:checked')].map(i => i.value),
+                search: dom.searchInput.value.toLowerCase()
+            };
+
+            const filteredCards = allCards.filter(card => {
+                const specMatch = filters.specialties.length === 0 || filters.specialties.includes(card.specialty || 'Geral');
+                const cardTags = (card.tags || '').split(',').map(t => t.trim());
+                const tagMatch = filters.tags.length === 0 || filters.tags.some(t => cardTags.includes(t));
+                const searchMatch = filters.search === '' || (card.question || '').toLowerCase().includes(filters.search) || (card.answer || '').toLowerCase().includes(filters.search);
+                return specMatch && tagMatch && searchMatch;
+            });
+            
+            const folders = filteredCards.reduce((acc, card) => {
+                const key = card.specialty || 'Geral';
+                if (!acc[key]) acc[key] = [];
+                acc[key].push(card);
+                return acc;
+            }, {});
+
+            dom.folderViewMessage.classList.toggle('hidden', Object.keys(folders).length > 0 || allCards.length === 0);
+            if (Object.keys(folders).length === 0 && allCards.length > 0) {
+                 dom.folderView.innerHTML = `<div class="col-span-full text-center p-8 text-slate-500 bg-slate-800/50 rounded-xl border border-dashed border-slate-700">Nenhum resultado encontrado.</div>`;
+                 return;
+            }
+
+            let delay = 0;
+            Object.keys(folders).sort().forEach(specialty => {
+                const cardsInDeck = folders[specialty];
+                const folder = document.createElement('button');
+                folder.className = 'group bg-slate-800/70 p-4 rounded-xl shadow-lg border border-slate-700/50 text-left hover:border-indigo-500/80 hover:bg-slate-800 transition-all duration-300 transform hover:scale-[1.03]';
+                folder.style.opacity = '0';
+                folder.style.animation = `fadeIn 0.5s ease ${delay}s forwards`;
+                delay += 0.05;
+
+                const progressBar = COLOR_ORDER.map(color => {
+                    const count = cardsInDeck.filter(c => c.masteryColor === color).length;
+                    const percentage = (count / cardsInDeck.length) * 100;
+                    return percentage > 0 ? `<div style="width:${percentage}%;" class="${MASTERY_LEVELS[color].btnBg}"></div>` : '';
+                }).join('');
+
+                folder.innerHTML = `<div class="flex items-center space-x-3 mb-2"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-folder-fill text-indigo-400" viewBox="0 0 16 16"><path d="M9.828 3h3.982a2 2 0 0 1 1.992 2.181l-.637 7A2 2 0 0 1 13.174 14H2.826a2 2 0 0 1-1.991-1.819l-.637-7a2 2 0 0 1 .342-1.31L.5 3a2 2 0 0 1 2-2h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3zm-8.322.12C1.72 3.042 1.95 3 2.19 3h5.396l-.707-.707A1 1 0 0 0 6.172 2H2.5a1 1 0 0 0-1 .981l.006.139z"/></svg><h3 class="text-base font-bold text-slate-200 truncate group-hover:text-white transition-colors">${specialty}</h3></div><p class="text-sm text-slate-400 ml-8">${cardsInDeck.length} Cards</p><div class="flex w-full overflow-hidden rounded-full mt-3 bg-slate-700 h-2">${progressBar}</div>`;
+                folder.onclick = () => startStudySession(specialty, cardsInDeck);
+                dom.folderView.appendChild(folder);
+            });
+        }
+        
+        function switchScreen(screen) {
+            dom.homeScreen.classList.toggle('hidden', screen === 'study');
+            dom.studyScreen.classList.toggle('hidden', screen === 'home');
+        }
+        
+        function startStudySession(title, cards) {
+            currentDeckCards = [...cards].sort(() => Math.random() - 0.5);
+            currentCardIndex = 0;
+            isFlipped = false;
+            dom.studyTitle.textContent = title;
+            renderStudyCard();
+            switchScreen('study');
+        }
+
+        function renderStudyCard() {
+             if (currentDeckCards.length === 0) { switchScreen('home'); return; }
+             if (currentCardIndex >= currentDeckCards.length) { currentCardIndex = 0; }
+             const card = currentDeckCards[currentCardIndex];
+             dom.frontText.innerHTML = marked.parse(card.question || '');
+             dom.backText.innerHTML = marked.parse(card.answer || '');
+             dom.cardIdDisplay.textContent = `${card.id}`;
+             dom.cardCounter.textContent = `Card ${currentCardIndex + 1} de ${currentDeckCards.length}`;
+             if (isFlipped) { dom.flashcard.classList.remove('is-flipped'); isFlipped = false; }
+             updateCardAppearance();
+        }
+
+        function updateCardAppearance() {
+            const card = currentDeckCards[currentCardIndex];
+            if (!card) return;
+            const level = MASTERY_LEVELS[card.masteryColor] || MASTERY_LEVELS['gray'];
+            Object.values(MASTERY_LEVELS).forEach(lvl => dom.cardFront.classList.remove(lvl.cardBg, lvl.text));
+            dom.cardFront.classList.add(level.cardBg, level.text);
+            dom.masteryControls.querySelectorAll('button').forEach(btn => {
+                const isSelected = btn.dataset.color === card.masteryColor;
+                btn.classList.toggle('ring-2', isSelected);
+                btn.classList.toggle('ring-offset-2', isSelected);
+                btn.classList.toggle('ring-offset-slate-800', isSelected);
+                btn.classList.toggle(MASTERY_LEVELS[btn.dataset.color].ring, isSelected);
+            });
+        }
+        
+        function renderMasteryButtons() {
+            dom.masteryControls.innerHTML = COLOR_ORDER.map(color => `<button data-color="${color}" class="mastery-btn flex-1 py-2 px-2 rounded-lg shadow-md transition-all text-white font-semibold text-xs ${MASTERY_LEVELS[color].btnBg} hover:opacity-80">${MASTERY_LEVELS[color].name}</button>`).join('');
+            dom.masteryControls.addEventListener('click', e => {
+                if(e.target.tagName !== 'BUTTON') return;
+                const color = e.target.dataset.color;
+                const card = currentDeckCards[currentCardIndex];
+                if(card) {
+                    card.masteryColor = color;
+                    updateDoc(doc(db, 'flashcards', card.id), { masteryColor: color });
+                    updateCardAppearance();
+                }
+            });
+        }
+
+        function showModalMessage(modalPrefix, message, isError = false) {
+            const msgEl = document.getElementById(`${modalPrefix}-card-message`);
+            msgEl.textContent = message;
+            msgEl.classList.remove('hidden');
+            msgEl.classList.toggle('text-red-500', isError);
+            msgEl.classList.toggle('text-green-500', !isError);
+            setTimeout(() => msgEl.classList.add('hidden'), 3000);
+        }
+
+        async function handleNewCardSubmit(e) {
+            e.preventDefault();
+            const form = dom.newCardForm;
+            const question = form.querySelector('#new-card-question').value.trim();
+            const answer = form.querySelector('#new-card-answer').value.trim();
+            if(!question || !answer) return;
+            try {
+                await addDoc(collection(db, 'flashcards'), {
+                    question, answer,
+                    specialty: form.querySelector('#new-card-specialty').value.trim() || 'Geral',
+                    tags: form.querySelector('#new-card-tags').value.trim(),
+                    masteryColor: 'gray', createdAt: serverTimestamp(), userId: authUser.uid
+                });
+                showModalMessage('new', 'Card salvo com sucesso!');
+                form.reset();
+            } catch(error) { showModalMessage('new', 'Erro ao salvar o card.', true); }
+        }
+
+        async function handleEditCardSubmit(e) {
+            e.preventDefault();
+            const card = currentDeckCards[currentCardIndex];
+            if(!card) return;
+            const form = dom.editCardForm;
+            try {
+                await updateDoc(doc(db, 'flashcards', card.id), {
+                    question: form.querySelector('#edit-card-question').value.trim(),
+                    answer: form.querySelector('#edit-card-answer').value.trim(),
+                    specialty: form.querySelector('#edit-card-specialty').value.trim() || 'Geral',
+                    tags: form.querySelector('#edit-card-tags').value.trim(),
+                });
+                showModalMessage('edit', 'Card atualizado!');
+                setTimeout(() => dom.editCardModal.classList.add('hidden'), 1000);
+            } catch(error) { showModalMessage('edit', 'Erro ao atualizar.', true); }
+        }
+
+        async function handleDeleteCard() {
+            const card = currentDeckCards[currentCardIndex];
+            if(!card) return;
+            try {
+                await deleteDoc(doc(db, 'flashcards', card.id));
+                allCards = allCards.filter(c => c.id !== card.id);
+                currentDeckCards.splice(currentCardIndex, 1);
+                dom.deleteConfirmModal.classList.add('hidden');
+                renderStudyCard();
+            } catch(error) { console.error("Error deleting card: ", error); }
+        }
+
+        function setupEventListeners() {
+            dom.filterControls.addEventListener('change', renderHomeScreen);
+            dom.searchInput.addEventListener('input', renderHomeScreen);
+            dom.clearFiltersButton.addEventListener('click', () => { dom.searchInput.value = ''; dom.filterControls.querySelectorAll('input').forEach(i => i.checked = false); renderHomeScreen(); });
+            
+            dom.addCardButton.addEventListener('click', () => dom.newCardModal.classList.remove('hidden'));
+            dom.newCardModal.addEventListener('click', e => { if(e.target.dataset.closeModal) dom.newCardModal.classList.add('hidden'); });
+            dom.newCardForm.addEventListener('submit', handleNewCardSubmit);
+            
+            dom.editCardButton.addEventListener('click', () => {
+                const card = currentDeckCards[currentCardIndex];
+                if(!card) return;
+                const form = dom.editCardForm;
+                form.querySelector('#edit-card-question').value = card.question;
+                form.querySelector('#edit-card-answer').value = card.answer;
+                form.querySelector('#edit-card-specialty').value = card.specialty;
+                form.querySelector('#edit-card-tags').value = card.tags;
+                dom.editCardModal.classList.remove('hidden');
+});
+            dom.editCardModal.addEventListener('click', e => { if(e.target.dataset.closeModal) dom.editCardModal.classList.add('hidden'); });
+            dom.editCardForm.addEventListener('submit', handleEditCardSubmit);
+
+            dom.deleteCardButton.addEventListener('click', () => dom.deleteConfirmModal.classList.remove('hidden'));
+            dom.cancelDeleteButton.addEventListener('click', () => dom.deleteConfirmModal.classList.add('hidden'));
+            dom.confirmDeleteButton.addEventListener('click', handleDeleteCard);
+
+            dom.backToHomeButton.addEventListener('click', () => switchScreen('home'));
+            dom.flashcard.addEventListener('click', () => { isFlipped = !isFlipped; dom.flashcard.classList.toggle('is-flipped'); });
+            dom.flipButton.addEventListener('click', () => { isFlipped = !isFlipped; dom.flashcard.classList.toggle('is-flipped'); });
+            dom.nextButton.addEventListener('click', () => { currentCardIndex = (currentCardIndex + 1) % currentDeckCards.length; renderStudyCard(); });
+            dom.prevButton.addEventListener('click', () => { currentCardIndex = (currentCardIndex - 1 + currentDeckCards.length) % currentDeckCards.length; renderStudyCard(); });
+        }
+
+        onAuthStateChanged(auth, user => {
+            if (user) {
+                authUser = user;
+                onSnapshot(collection(db, 'flashcards'), snapshot => {
+                    allCards = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id, masteryColor: convertMasteryValueToString(doc.data().masteryColor) }));
+                    dom.loading.classList.add('hidden');
+                    renderFilterControls();
+                    renderHomeScreen();
+                }, error => {
+                    console.error("Firestore snapshot error:", error);
+                    dom.loading.innerHTML = `<p class="text-red-500">Erro ao carregar dados. Verifique o console.</p>`;
+                });
+            } else {
+                signInAnonymously(auth).catch(err => console.error("Anonymous sign-in failed", err));
+            }
+        });
+        
+        renderMasteryButtons();
+        setupEventListeners();
+    </script>
+</body>
+</html>
