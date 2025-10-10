@@ -16,6 +16,15 @@
         }
         @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes shimmer {
+            0% { background-position: -1000px 0; }
+            100% { background-position: 1000px 0; }
+        }
+        .skeleton {
+            animation: shimmer 2s infinite linear;
+            background: linear-gradient(to right, #2d3748 4%, #3c4a5f 25%, #2d3748 36%);
+            background-size: 1000px 100%;
+        }
     </style>
 </head>
 <body class="text-slate-200">
@@ -30,11 +39,10 @@
 
             <!-- KPIs -->
             <div id="kpi-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-                <!-- Skeleton Loader -->
-                <div class="bg-slate-800/80 p-5 rounded-xl border border-slate-700/50 animate-pulse h-24"></div>
-                <div class="bg-slate-800/80 p-5 rounded-xl border border-slate-700/50 animate-pulse h-24"></div>
-                <div class="bg-slate-800/80 p-5 rounded-xl border border-slate-700/50 animate-pulse h-24"></div>
-                <div class="bg-slate-800/80 p-5 rounded-xl border border-slate-700/50 animate-pulse h-24"></div>
+                <div class="bg-slate-800/80 p-5 rounded-xl border border-slate-700/50 skeleton h-24"></div>
+                <div class="bg-slate-800/80 p-5 rounded-xl border border-slate-700/50 skeleton h-24"></div>
+                <div class="bg-slate-800/80 p-5 rounded-xl border border-slate-700/50 skeleton h-24"></div>
+                <div class="bg-slate-800/80 p-5 rounded-xl border border-slate-700/50 skeleton h-24"></div>
             </div>
 
             <!-- Navigation Links -->
@@ -86,9 +94,7 @@
         };
 
         function formatTime(minutes) {
-            if (minutes < 60) {
-                return `${Math.round(minutes)} min`;
-            }
+            if (minutes < 60) return `${Math.round(minutes)} min`;
             const hours = Math.floor(minutes / 60);
             const remainingMinutes = Math.round(minutes % 60);
             return `${hours}h ${remainingMinutes}m`;
@@ -104,8 +110,8 @@
                     const kpi1 = DOM.kpiContainer.children[0];
                     const kpi2 = DOM.kpiContainer.children[1];
                     if(kpi1 && kpi2) {
-                        kpi1.classList.remove('animate-pulse', 'h-24');
-                        kpi2.classList.remove('animate-pulse', 'h-24');
+                        kpi1.classList.remove('skeleton', 'h-24');
+                        kpi2.classList.remove('skeleton', 'h-24');
                         kpi1.innerHTML = `<div><p class="text-sm text-slate-400">Total de Cards</p><p class="text-3xl font-bold text-white">${totalCards}</p></div>`;
                         kpi2.innerHTML = `<div><p class="text-sm text-slate-400">Revisão Urgente</p><p class="text-3xl font-bold text-red-400">${reviewCards}</p></div>`;
                     }
@@ -116,25 +122,22 @@
                 onSnapshot(sessionsQuery, snapshot => {
                     const totalSessions = snapshot.size;
                     let totalTime = 0;
-                    snapshot.docs.forEach(doc => {
-                        totalTime += doc.data().duracao || 0;
-                    });
+                    snapshot.docs.forEach(doc => { totalTime += doc.data().duracao || 0; });
                     
                     const kpi3 = DOM.kpiContainer.children[2];
                     const kpi4 = DOM.kpiContainer.children[3];
                      if(kpi3 && kpi4) {
-                        kpi3.classList.remove('animate-pulse', 'h-24');
-                        kpi4.classList.remove('animate-pulse', 'h-24');
+                        kpi3.classList.remove('skeleton', 'h-24');
+                        kpi4.classList.remove('skeleton', 'h-24');
                         kpi3.innerHTML = `<div><p class="text-sm text-slate-400">Sessões de Foco</p><p class="text-3xl font-bold text-white">${totalSessions}</p></div>`;
                         kpi4.innerHTML = `<div><p class="text-sm text-slate-400">Tempo Focado</p><p class="text-3xl font-bold text-white">${formatTime(totalTime)}</p></div>`;
                     }
                     
-                    // Recent Activity
                     const recentSessions = snapshot.docs.slice(0, 3);
                     if (recentSessions.length > 0) {
                         DOM.recentActivityContainer.innerHTML = recentSessions.map(doc => {
                             const data = doc.data();
-                            const date = data.createdAt.toDate().toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+                            const date = data.createdAt ? data.createdAt.toDate().toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) : '...';
                             return `<div class="bg-slate-800/50 p-3 rounded-lg text-sm flex justify-between items-center"><p class="text-slate-300">Sessão de <span class="font-semibold text-indigo-400">${data.tagEstudo}</span></p><p class="text-slate-400">${date} - ${data.duracao} min</p></div>`
                         }).join('');
                     }
