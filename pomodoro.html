@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temporizador Pomodoro</title>
+    <!-- Carrega o Tailwind CSS CDN para usar classes utilitárias -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Define a fonte Inter (padrão recomendado) e um fundo pontilhado simples */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f7f7;
+            background-image: radial-gradient(#d3d3d3 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        /* Estilo para criar o triângulo do botão Play usando bordas */
+        .play-triangle {
+            width: 0;
+            height: 0;
+            border-top: 35px solid transparent;
+            border-bottom: 35px solid transparent;
+            /* A cor deve ser a mesma do novo container principal (gray-800, #1f2937) */
+            border-left: 60px solid #1f2937; 
+            margin-left: 10px; /* Ajuste visual para centralizar */
+        }
+        
+        /* Estilo para centralizar o texto dentro do input de número */
+        .number-display {
+            -moz-appearance: textfield;
+            text-align: center;
+        }
+        .number-display::-webkit-outer-spin-button,
+        .number-display::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-6">
+
+    <!-- Título Principal -->
+    <h1 class="text-5xl font-extrabold mb-10 tracking-wider font-serif text-gray-900">Title</h1>
+
+    <!-- Container Principal (Temporizador e Botão Play) -->
+    <!-- Cor: Cinza Escuro/Preto (bg-gray-800) -->
+    <div class="bg-gray-800 w-full max-w-xl p-8 sm:p-12 rounded-xl shadow-2xl flex flex-col sm:flex-row items-center justify-between relative">
+        
+        <!-- Botão Play/Pause -->
+        <div class="w-32 h-32 sm:w-40 sm:h-40 bg-transparent border-8 border-white rounded-full flex items-center justify-center mb-6 sm:mb-0 cursor-pointer hover:scale-[1.02] transition">
+            <div class="play-triangle"></div>
+        </div>
+
+        <!-- Display do Tempo e Contagem -->
+        <div class="text-white text-center sm:text-right">
+            <div class="text-7xl sm:text-8xl font-medium leading-none mb-2">25:00</div>
+            <div class="text-2xl sm:text-3xl font-normal">focus 1/4</div>
+        </div>
+    </div>
+
+    <!-- Retângulo para o Cog/Engrenagem (Configurações) -->
+    <!-- Cor: Cinza Médio (bg-gray-700) -->
+    <div class="bg-gray-700 hover:bg-gray-600 p-4 mt-4 w-full max-w-xl rounded-xl shadow-lg transition duration-200 flex justify-center cursor-pointer">
+        <!-- Ícone da Engrenagem (Configurações) -->
+        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.526.324 1.03.496 1.516.496.517 0 1.03-.172 1.516-.496z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+        </svg>
+    </div>
+
+    <!-- NOVO: Container de Configurações de Tempo/Sessões -->
+    <div class="bg-white w-full max-w-xl p-6 mt-6 rounded-xl shadow-xl border border-gray-200">
+        <h2 class="text-xl font-bold mb-4 text-gray-900 border-b pb-2">Ajustes do Pomodoro</h2>
+
+        <!-- Grid para as configurações (Nome à esquerda, Controle à direita) -->
+        <div class="space-y-4">
+
+            <!-- Item de Configuração: Tempo de Foco -->
+            <div class="flex justify-between items-center">
+                <span class="text-gray-700 font-medium">Tempo de foco (minutos)</span>
+                <div class="flex items-center space-x-1">
+                    <button class="bg-gray-700 hover:bg-gray-600 text-white w-8 h-8 rounded-lg text-lg font-bold transition">-</button>
+                    <!-- Input de Número -->
+                    <input type="number" value="25" min="1" class="number-display bg-gray-100 text-gray-900 w-16 h-8 rounded-lg text-lg font-semibold border border-gray-300 focus:outline-none focus:border-gray-500">
+                    <button class="bg-gray-700 hover:bg-gray-600 text-white w-8 h-8 rounded-lg text-lg font-bold transition">+</button>
+                </div>
+            </div>
+
+            <!-- Item de Configuração: Tempo de Descanso -->
+            <div class="flex justify-between items-center">
+                <span class="text-gray-700 font-medium">Tempo de descanso (curto)</span>
+                <div class="flex items-center space-x-1">
+                    <button class="bg-gray-700 hover:bg-gray-600 text-white w-8 h-8 rounded-lg text-lg font-bold transition">-</button>
+                    <input type="number" value="5" min="1" class="number-display bg-gray-100 text-gray-900 w-16 h-8 rounded-lg text-lg font-semibold border border-gray-300 focus:outline-none focus:border-gray-500">
+                    <button class="bg-gray-700 hover:bg-gray-600 text-white w-8 h-8 rounded-lg text-lg font-bold transition">+</button>
+                </div>
+            </div>
+            
+            <!-- Item de Configuração: Tempo de Descanso Longo -->
+            <div class="flex justify-between items-center">
+                <span class="text-gray-700 font-medium">Tempo de descanso (longo)</span>
+                <div class="flex items-center space-x-1">
+                    <button class="bg-gray-700 hover:bg-gray-600 text-white w-8 h-8 rounded-lg text-lg font-bold transition">-</button>
+                    <input type="number" value="15" min="1" class="number-display bg-gray-100 text-gray-900 w-16 h-8 rounded-lg text-lg font-semibold border border-gray-300 focus:outline-none focus:border-gray-500">
+                    <button class="bg-gray-700 hover:bg-gray-600 text-white w-8 h-8 rounded-lg text-lg font-bold transition">+</button>
+                </div>
+            </div>
+            
+            <!-- Item de Configuração: Número de Sessões de Foco -->
+            <div class="flex justify-between items-center">
+                <span class="text-gray-700 font-medium">Nº de sessões de foco</span>
+                <div class="flex items-center space-x-1">
+                    <button class="bg-gray-700 hover:bg-gray-600 text-white w-8 h-8 rounded-lg text-lg font-bold transition">-</button>
+                    <input type="number" value="4" min="1" class="number-display bg-gray-100 text-gray-900 w-16 h-8 rounded-lg text-lg font-semibold border border-gray-300 focus:outline-none focus:border-gray-500">
+                    <button class="bg-gray-700 hover:bg-gray-600 text-white w-8 h-8 rounded-lg text-lg font-bold transition">+</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Botão Inferior de Ação -->
+    <!-- Cor: Cinza Médio (bg-gray-700) -->
+    <button class="bg-gray-700 hover:bg-gray-600 text-white text-lg font-semibold py-4 px-8 mt-6 w-full max-w-xl rounded-xl shadow-lg transition duration-200 cursor-pointer">
+        Abrir banco de dados
+    </button>
+
+</body>
+</html>
