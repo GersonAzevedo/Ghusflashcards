@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - App de Estudos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        html, body { height: 100%; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(-45deg, #111827, #1e1b4b, #312e81, #1e293b);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+        }
+        @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+    </style>
+</head>
+<body class="text-slate-200">
+
+    <div class="w-full h-full flex flex-col items-center justify-center p-4">
+        <div class="w-full max-w-sm bg-slate-900/70 backdrop-blur-xl border border-slate-700/50 rounded-3xl shadow-2xl shadow-black/30 p-8">
+            <header class="text-center mb-6">
+                <h1 class="text-3xl font-extrabold text-white">Bem-vindo(a)</h1>
+                <p class="text-slate-400 mt-2">Faça login para acessar seus estudos.</p>
+            </header>
+            
+            <form id="login-form" class="space-y-4" autocomplete="off">
+                <div>
+                    <label for="login-email" class="block text-sm font-medium text-slate-400">Email</label>
+                    <input type="email" id="login-email" required autocomplete="off" class="mt-1 w-full p-2 bg-slate-800 border border-slate-700 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label for="login-password" class="block text-sm font-medium text-slate-400">Senha</label>
+                    <input type="password" id="login-password" required autocomplete="new-password" class="mt-1 w-full p-2 bg-slate-800 border border-slate-700 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                
+                <div class="pt-2">
+                    <button id="submit-button" type="submit" class="w-full py-2.5 px-4 bg-indigo-600 text-white font-bold rounded-lg shadow-md hover:bg-indigo-700 transition-colors duration-300">Entrar</button>
+                </div>
+            </form>
+            <p id="login-message" class="text-center mt-4 text-sm text-red-400 hidden"></p>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmação -->
+    <div id="confirm-persistence-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center hidden z-50">
+        <div class="bg-slate-800 p-6 rounded-xl shadow-2xl w-full max-w-md mx-4 border border-slate-700">
+            <h3 class="text-lg font-bold text-white mb-2">Ativar "Continuar Conectado"</h3>
+            <p class="text-slate-400 mb-4">Para manter sua sessão ativa neste dispositivo, digite <strong class="text-indigo-400">ConfioNesteComputador</strong> abaixo.</p>
+            <input type="text" id="confirm-input" placeholder="Digite a frase aqui..." class="w-full p-2 bg-slate-700 border border-slate-600 rounded-md text-white placeholder-slate-500">
+            <div class="mt-6 flex justify-end space-x-4">
+                <button id="cancel-confirm-button" class="py-2 px-4 bg-slate-700 text-slate-200 font-bold rounded-lg hover:bg-slate-600">Cancelar</button>
+                <button id="submit-confirm-button" class="py-2 px-4 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 disabled:bg-slate-600 disabled:cursor-not-allowed" disabled>Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, setPersistence, browserSessionPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAJ7fpCQPimWgcJuYiLbCZ5Rf5YUgMVZ2Q",
+            authDomain: "ghus-app.firebaseapp.com",
+            projectId: "ghus-app",
+            storageBucket: "ghus-app.firebasestorage.app",
+            messagingSenderId: "1047907929485",
+            appId: "1:1047907929485:web:cba05f2850df61d201c1c4",
+        };
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        const DOM = {
+            loginForm: document.getElementById('login-form'),
+            emailInput: document.getElementById('login-email'),
+            passwordInput: document.getElementById('login-password'),
+            loginMessage: document.getElementById('login-message'),
+            submitButton: document.getElementById('submit-button'),
+            confirmModal: document.getElementById('confirm-persistence-modal'),
+            confirmInput: document.getElementById('confirm-input'),
+            cancelConfirmButton: document.getElementById('cancel-confirm-button'),
+            submitConfirmButton: document.getElementById('submit-confirm-button')
+        };
+        
+        const PHRASE_TO_CONFIRM = 'ConfioNesteComputador';
+        let longPressTimer;
+        let persistenceConfirmed = false;
+
+        onAuthStateChanged(auth, user => {
+            if (user) {
+                window.location.href = 'index.html';
+            }
+        });
+        
+        const resetUIState = () => {
+            persistenceConfirmed = false;
+            DOM.submitButton.classList.remove('bg-green-600', 'hover:bg-green-700');
+            DOM.submitButton.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+            DOM.loginMessage.classList.add('hidden');
+        };
+
+        const performLogin = (email, password) => {
+            const persistence = persistenceConfirmed ? browserLocalPersistence : browserSessionPersistence;
+            
+            setPersistence(auth, persistence)
+                .then(() => signInWithEmailAndPassword(auth, email, password))
+                .catch((error) => {
+                    let message = "Ocorreu um erro.";
+                    if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                        message = "Email ou senha inválidos.";
+                    }
+                    DOM.loginMessage.textContent = message;
+                    DOM.loginMessage.classList.remove('hidden');
+                    resetUIState();
+                });
+        };
+
+        const startPress = () => {
+            longPressTimer = window.setTimeout(() => {
+                DOM.confirmModal.classList.remove('hidden');
+            }, 5000); // 5 segundos
+        };
+        const cancelPress = () => clearTimeout(longPressTimer);
+
+        DOM.submitButton.addEventListener('mousedown', startPress);
+        DOM.submitButton.addEventListener('touchstart', startPress);
+        DOM.submitButton.addEventListener('mouseup', cancelPress);
+        DOM.submitButton.addEventListener('mouseleave', cancelPress);
+        DOM.submitButton.addEventListener('touchend', cancelPress);
+        
+        DOM.loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = DOM.emailInput.value;
+            const password = DOM.passwordInput.value;
+            DOM.loginMessage.classList.add('hidden');
+            performLogin(email, password);
+        });
+        
+        DOM.cancelConfirmButton.addEventListener('click', () => {
+            DOM.confirmModal.classList.add('hidden');
+            DOM.confirmInput.value = '';
+            DOM.submitConfirmButton.disabled = true;
+        });
+
+        DOM.submitConfirmButton.addEventListener('click', () => {
+            persistenceConfirmed = true;
+            DOM.submitButton.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+            DOM.submitButton.classList.add('bg-green-600', 'hover:bg-green-700');
+            DOM.loginMessage.textContent = "Eu me lembrarei...";
+            DOM.loginMessage.classList.remove('hidden', 'text-red-400');
+            DOM.loginMessage.classList.add('text-green-400');
+            DOM.confirmModal.classList.add('hidden');
+        });
+
+        DOM.confirmInput.addEventListener('input', () => {
+            DOM.submitConfirmButton.disabled = DOM.confirmInput.value !== PHRASE_TO_CONFIRM;
+        });
+    </script>
+</body>
+</html>
+
